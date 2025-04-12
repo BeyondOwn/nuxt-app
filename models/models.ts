@@ -1,0 +1,26 @@
+export interface createGame{
+        error?:string
+        date_hour:string
+        victory_team:{
+            name:string;
+            kd:string;
+            debuffs:number,
+            dealt:number,
+            taken:number,
+            healed:number,
+        }[],
+        defeat_team:{
+            name:string;
+            kd:string;
+            debuffs:number,
+            dealt:number,
+            taken:number,
+            healed:number,
+        }[],
+        score:{
+            victory_team_score:number,
+            defeat_team_score:number,
+        },
+        victory_team_name:string,
+        defeat_team_name:string,
+    };
