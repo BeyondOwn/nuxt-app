@@ -9,12 +9,198 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      aggregated_stats: {
+        Row: {
+          average_dealt: number | null
+          average_deaths: number | null
+          average_debuffs: number | null
+          average_healed: number | null
+          average_kd: number | null
+          average_kdr: number | null
+          average_taken: number | null
+          created_at: string
+          enemy_guild: string
+          games_count: number | null
+          guild: string | null
+          highest_dealt: number | null
+          highest_deaths: number | null
+          highest_debuffs: number | null
+          highest_healed: number | null
+          highest_kd: number | null
+          highest_taken: number | null
+          player_name: string
+          total_dealt: number | null
+          total_deaths: number | null
+          total_debuffs: number | null
+          total_healed: number | null
+          total_kd: number | null
+          total_taken: number | null
+        }
+        Insert: {
+          average_dealt?: number | null
+          average_deaths?: number | null
+          average_debuffs?: number | null
+          average_healed?: number | null
+          average_kd?: number | null
+          average_kdr?: number | null
+          average_taken?: number | null
+          created_at?: string
+          enemy_guild: string
+          games_count?: number | null
+          guild?: string | null
+          highest_dealt?: number | null
+          highest_deaths?: number | null
+          highest_debuffs?: number | null
+          highest_healed?: number | null
+          highest_kd?: number | null
+          highest_taken?: number | null
+          player_name: string
+          total_dealt?: number | null
+          total_deaths?: number | null
+          total_debuffs?: number | null
+          total_healed?: number | null
+          total_kd?: number | null
+          total_taken?: number | null
+        }
+        Update: {
+          average_dealt?: number | null
+          average_deaths?: number | null
+          average_debuffs?: number | null
+          average_healed?: number | null
+          average_kd?: number | null
+          average_kdr?: number | null
+          average_taken?: number | null
+          created_at?: string
+          enemy_guild?: string
+          games_count?: number | null
+          guild?: string | null
+          highest_dealt?: number | null
+          highest_deaths?: number | null
+          highest_debuffs?: number | null
+          highest_healed?: number | null
+          highest_kd?: number | null
+          highest_taken?: number | null
+          player_name?: string
+          total_dealt?: number | null
+          total_deaths?: number | null
+          total_debuffs?: number | null
+          total_healed?: number | null
+          total_kd?: number | null
+          total_taken?: number | null
+        }
+        Relationships: []
+      }
+      aggregated_stats_total: {
+        Row: {
+          average_dealt: number | null
+          average_deaths: number | null
+          average_debuffs: number | null
+          average_healed: number | null
+          average_kd: number | null
+          average_kdr: number | null
+          average_taken: number | null
+          created_at: string
+          enemy_guild: string
+          games_count: number | null
+          guild: string | null
+          highest_dealt: number | null
+          highest_deaths: number | null
+          highest_debuffs: number | null
+          highest_healed: number | null
+          highest_kd: number | null
+          highest_taken: number | null
+          player_name: string
+          total_dealt: number | null
+          total_deaths: number | null
+          total_debuffs: number | null
+          total_healed: number | null
+          total_kd: number | null
+          total_taken: number | null
+        }
+        Insert: {
+          average_dealt?: number | null
+          average_deaths?: number | null
+          average_debuffs?: number | null
+          average_healed?: number | null
+          average_kd?: number | null
+          average_kdr?: number | null
+          average_taken?: number | null
+          created_at?: string
+          enemy_guild: string
+          games_count?: number | null
+          guild?: string | null
+          highest_dealt?: number | null
+          highest_deaths?: number | null
+          highest_debuffs?: number | null
+          highest_healed?: number | null
+          highest_kd?: number | null
+          highest_taken?: number | null
+          player_name: string
+          total_dealt?: number | null
+          total_deaths?: number | null
+          total_debuffs?: number | null
+          total_healed?: number | null
+          total_kd?: number | null
+          total_taken?: number | null
+        }
+        Update: {
+          average_dealt?: number | null
+          average_deaths?: number | null
+          average_debuffs?: number | null
+          average_healed?: number | null
+          average_kd?: number | null
+          average_kdr?: number | null
+          average_taken?: number | null
+          created_at?: string
+          enemy_guild?: string
+          games_count?: number | null
+          guild?: string | null
+          highest_dealt?: number | null
+          highest_deaths?: number | null
+          highest_debuffs?: number | null
+          highest_healed?: number | null
+          highest_kd?: number | null
+          highest_taken?: number | null
+          player_name?: string
+          total_dealt?: number | null
+          total_deaths?: number | null
+          total_debuffs?: number | null
+          total_healed?: number | null
+          total_kd?: number | null
+          total_taken?: number | null
+        }
+        Relationships: []
+      }
+      debug_logs: {
+        Row: {
+          created_at: string
+          id: number
+          log_message: string | null
+          log_time: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          log_message?: string | null
+          log_time?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          log_message?: string | null
+          log_time?: string | null
+        }
+        Relationships: []
+      }
       game_players: {
         Row: {
           created_at: string
           dealt: number | null
+          deaths: number | null
           debuffs: number | null
+          enemy_guild: string | null
           game_id: number | null
+          guild: string | null
           healed: number | null
           id: number
           kd: string | null
@@ -25,8 +211,11 @@ export type Database = {
         Insert: {
           created_at?: string
           dealt?: number | null
+          deaths?: number | null
           debuffs?: number | null
+          enemy_guild?: string | null
           game_id?: number | null
+          guild?: string | null
           healed?: number | null
           id?: number
           kd?: string | null
@@ -37,8 +226,11 @@ export type Database = {
         Update: {
           created_at?: string
           dealt?: number | null
+          deaths?: number | null
           debuffs?: number | null
+          enemy_guild?: string | null
           game_id?: number | null
+          guild?: string | null
           healed?: number | null
           id?: number
           kd?: string | null
@@ -115,7 +307,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      extract_kills: {
+        Args: { kd_text: string }
+        Returns: number
+      }
     }
     Enums: {
       team_type_types: "victory" | "defeat"

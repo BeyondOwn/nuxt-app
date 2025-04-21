@@ -17,6 +17,11 @@ export default defineNuxtConfig({
     families: [
       {
         name: 'Poppins',
+        weights: [100, 200, 300, 400, 500, 600, 700, 800],
+        fallbacks: ['Arial'],
+      },
+      {
+        name: 'Montserrat',
         weights: [400, 500, 600, 700, 800],
         fallbacks: ['Arial'],
       },

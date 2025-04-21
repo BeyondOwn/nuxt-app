@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { UButton } from '#components';
+import { formatNumberWithCommas } from '@/server/utils/formatNumberWithCommas';
 import type { Database } from '@/types/supabase';
 import type { TableColumn } from '@nuxt/ui';
 
 const myGuild = ref('Insecure');
 
 const user = await useSupabaseUser();
+const nuxtApp = useNuxtApp();
 console.log("USER FROM FRONT: ", user);
 
 interface tableDataInt {
@@ -17,9 +19,6 @@ interface tableDataInt {
     healed: number | null
 }
 
-function formatNumberWithCommas(number: number) {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
 
 const toast = useToast();
 const route = useRoute();
@@ -31,15 +30,25 @@ const victoryTableData = ref<tableDataInt[]>([]);
 const defeatTableData = ref<tableDataInt[]>([]);
 
 const { data: queryParams } = await useAsyncData(
-    'game',
-    () => $fetch<Database['public']['Tables']['games']['Row']>('/api/get-game', { method: 'POST', body: gameId })
+    `game${gameId}`,
+    () => $fetch<Database['public']['Tables']['games']['Row']>('/api/get-game', { method: 'POST', body: gameId }),
+    {
+        getCachedData(key) {
+            return nuxtApp.payload.data[key] || nuxtApp.static.data[key];
+        }
+    }
 );
 
 console.log("query: ", queryParams.value)
 
 const { data: stats, status, error, refresh, clear } = await useAsyncData(
-    `stats ${gameId}`,
-    () => $fetch<Database['public']['Tables']['game_players']['Row'][]>('/api/get-player-stats', { method: 'POST', body: { gameId: gameId } })
+    `stats${gameId}`,
+    () => $fetch<Database['public']['Tables']['game_players']['Row'][]>('/api/get-player-stats', { method: 'POST', body: { gameId: gameId } }),
+    {
+        getCachedData(key) {
+            return nuxtApp.payload.data[key] || nuxtApp.static.data[key];
+        }
+    }
 );
 if (stats.value) {
     stats.value?.map((stat) => {
@@ -181,8 +190,8 @@ const columns: TableColumn<tableDataInt, unknown>[] = [
 ];
 
 const tableUI = 'even:bg-card  odd:bg-muted text-center max-w-[600px]';
-const tableHead = 'bg-purple-700 py-0  h-[50px] text-center first:text-left'
-const td = 'text-foreground  text-base'
+const tableHead = `bg-purple-500 dark:bg-purple-700 py-0  h-[50px] text-center first:text-left `
+const td = 'text-foreground  text-base '
 
 const sortingVictory = ref([
     {
@@ -203,19 +212,24 @@ const sortingDefeat = ref([
 </script>
 
 <template>
-    <div class="grid grid-cols-12  w-full place-items-center text-foreground overflow-auto px-4">
-        <div v-if="queryParams" class="text-2xl col-span-12 font-semibold w-[90%] 2xl:w-7xl flex flex-row  gap-4">
+    <div class="grid grid-cols-12  w-full place-items-center text-foreground overflow-auto px-4  ">
+        <div v-if="queryParams"
+            class="text-2xl col-span-12 font-semibold w-[90%] 2xl:w-7xl flex flex-row  gap-4 relative">
+            <div @click="$router.back"
+                class="h-8 w-8 rounded-xl absolute -left-10 justify-items-center place-items-center hover:bg-accent">
+                <UIcon size="32" name="material-symbols:arrow-back" />
+            </div>
             <span class="text-error" v-if="myGuild == queryParams?.defeat_team_name">Defeat vs {{
                 queryParams?.victory_team_name
-            }}</span>
+                }}</span>
             <span class="text-primary-nuxt" v-else>Victory vs {{ queryParams?.defeat_team_name }}</span>
             <span>Score: {{ queryParams?.victory_team_score }} - {{ queryParams?.defeat_team_score }}</span>
             <span class=" ml-auto">{{ queryParams?.date_hour }}</span>
         </div>
         <div v-if="!loading" class="col-span-12  flex flex-col 2xl:flex-row mt-2  gap-4 w-[90%]  2xl:w-7xl  ">
             <div class="flex flex-col items-center    ">
-                <div class="w-full flex flex-col items-center bg-purple-700">
-                    <span class="font-bold text-primary-nuxt">[Victory] {{ queryParams?.victory_team_name }}</span>
+                <div class="w-full flex flex-col items-center bg-purple-500 dark:bg-purple-700">
+                    <span class="font-bold text-green-500">[Victory] {{ queryParams?.victory_team_name }}</span>
                 </div>
                 <UTable v-model:sorting="sortingVictory" :ui="{ td: td, tr: tableUI, th: tableHead }"
                     class=" w-full 2xl:w-[635px] font-light overflow-auto" :data="victoryTableData"
@@ -223,8 +237,8 @@ const sortingDefeat = ref([
             </div>
 
             <div class=" flex flex-col items-center ">
-                <div class="w-full flex flex-col items-center bg-purple-700">
-                    <span class="font-bold text-red-600">[Defeat] {{ queryParams?.defeat_team_name }}</span>
+                <div class="w-full flex flex-col items-center bg-purple-500 dark:bg-purple-700">
+                    <span class="font-bold text-red-500">[Defeat] {{ queryParams?.defeat_team_name }}</span>
                 </div>
                 <UTable v-model:sorting="sortingDefeat" :ui="{ td: td, tr: tableUI, th: tableHead }"
                     class="w-full 2xl:w-[635px] font-light overflow-auto" :data="defeatTableData" :columns="columns" />

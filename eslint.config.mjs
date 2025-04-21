@@ -7,6 +7,8 @@ export default withNuxt(
       "vue/html-self-closing":'off',
       "vue/multiline-html-element-content-newline":'off',
       "vue/first-attribute-linebreak":'off',
+      "vue/attributes-order":'off',
+      "@typescript-eslint/no-explicit-any":"off",
     }
   }
 )

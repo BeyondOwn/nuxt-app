@@ -10,7 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "resolutions": {
-     "cookie": "0.7.2"
+    "cookie": "0.7.2"
   },
   "dependencies": {
     "@google/genai": "^0.7.0",
@@ -25,11 +25,14 @@
     "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/vite": "^4.1.3",
     "@unhead/vue": "^2.0.5",
+    "apexcharts": "^4.5.0",
     "eslint": "^9.24.0",
+    "lucide-vue-next": "^0.488.0",
     "nuxt": "^3.16.2",
     "typescript": "^5.8.3",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "vue3-apexcharts": "^1.8.0"
   },
   "devDependencies": {
     "@nuxtjs/supabase": "^1.5.0",

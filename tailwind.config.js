@@ -87,6 +87,7 @@ module.exports = {
           'accordion-up': 'accordion-up 0.2s ease-out',
         },
         fontFamily: {
+            montserrat:['var(--font-montserrat)'],
             poppins: ['var(--font-poppins)'],
             khand: ['var(--font-khand)'],
             sans: ['var(--font-inter)'],
