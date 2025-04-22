@@ -13,6 +13,8 @@ const sorting = ref([
 ])
 const nuxtApp = useNuxtApp();
 
+
+
 const defaultMetrics: CalculatedMetrics = {
     averageDealt: { dealt: 0, name: '-' }, averageTaken: { taken: 0, name: '-' },
     averageDebuffs: { debuffs: 0, name: '-' }, averageHealed: { healed: 0, name: '-' },
@@ -30,6 +32,9 @@ const select = ref<string>()
 const activeTab = ref('0');
 const renderKey = ref(0);
 const renderKeyU = ref(0);
+
+
+
 
 const { data: opponents, error: opponentsError } = await useAsyncData('opponents', async () => {
     return await $fetch<{ enemy_guild: string }[]>('/api/get-opponents');
@@ -61,7 +66,7 @@ watch(select, async (value, oldVal) => {
         enemyGuild.value = select.value;
         activeTab.value = '0'
         await getGuildStats();
-        console.log("Xd: ", gameData.value)
+        // console.log("Xd: ", gameData.value)
     }
 })
 
@@ -88,8 +93,8 @@ watch(activeTab, (newValue, oldValue) => {
                 guildMetrics: gameData.value.enemyMetrics ? { ...gameData.value.enemyMetrics } : { ...defaultMetrics }
             };
         }
-        console.log("Watcher: Updated displayData:", displayData.value);
-        console.log("gamedata after tab change: ", gameData.value); // Add this for debugging
+        // console.log("Watcher: Updated displayData:", displayData.value);
+        // console.log("gamedata after tab change: ", gameData.value); // Add this for debugging
     }
 }, { immediate: false });
 
@@ -112,7 +117,7 @@ const getGuildStats = async () => {
     if (data.value) {
         gameData.value = data.value;
         displayData.value = data.value;
-        console.log("gamedata: ", gameData.value)
+        // console.log("gamedata: ", gameData.value)
     }
 
 }
@@ -120,7 +125,7 @@ const getGuildStats = async () => {
 onMounted(async () => {
     await getGuildStats();
     if (!gameData.value) await getGuildStats();
-    console.log("gamedata: ", gameData.value)
+    // console.log("gamedata: ", gameData.value)
 })
 
 const visibleColumns: TableColumn<Database['public']['Tables']['aggregated_stats_total']['Row']>[] = [
@@ -486,15 +491,77 @@ const tr = 'even:bg-card  odd:bg-muted text-center max-w-[600px]';
 const tableHead = `bg-purple-500 dark:bg-purple-700 py-0  h-[50px] text-center  `
 const td = 'text-foreground  text-base '
 
+const pieChartOptions = computed(() => {
+    if (!displayData.value?.guildStats) {
+        return {
+            chart: {
+                type: 'pie',
+            },
+            labels: [],
+            series: [44, 55, 13, 43], // Data values for each slice
+            colors: ['#EE6D7A', '#4CAF50', '#2196F3', '#FFC107'],
+            legend: {
+                position: 'right',
+                labels: {
+                    colors: 'text-foreground'
+                }
+            },
+            responsive: [
+                {
+                    breakpoint: 480,
+                    options: {
+                        // chart: {
+                        //     width: 200,
+                        // },
+                        legend: {
+                            position: 'bottom',
+                        },
+                    },
+                },
+            ],
+        };
+    }
+    else {
+        return {
+            chart: {
+                type: 'pie',
+            },
+            labels: displayData.value?.guildStats?.filter(player => player).map(player => player.player_name),
+            series: [44, 55, 13, 43], // Data values for each slice
+            colors: ['#EE6D7A', '#4CAF50', '#2196F3', '#FFC107'],
+            legend: {
+                position: 'right',
+                labels: {
+                    colors: 'text-foreground'
+                }
+            },
+            responsive: [
+                {
+                    breakpoint: 480,
+                    options: {
+                        // chart: {
+                        //     width: 200,
+                        // },
+                        legend: {
+                            position: 'bottom',
+                        },
+                    },
+                },
+            ],
+        };
+    }
+
+})
+
 </script>
 
 <template>
     <div v-if="gameData && displayData"
-        class="h-full 2xl:w-7xl flex flex-col w-screen  place-self-center items-center ">
+        class="h-full 2xl:w-7xl flex flex-col max-w-7xl w-screen  place-self-center items-center overflow-auto ">
         <span class=" font-bold text-4xl">Guild Stats</span>
         <!-- Top Players Cards -->
         <div
-            class="h-[400px]  2xl:h-[380px] overflow-auto w-full 2xl:grid space-y-4 2xl:gap-x-2 2xl:space-y-0 flex-row justify-items-center grid-rows-2 grid-cols-5 auto-rows-min    2xl:justify-between items-center   ">
+            class="h-[400px]  2xl:h-[380px] overflow-auto w-full 2xl:max-w-7xl 2xl:grid space-y-4 2xl:gap-x-2 2xl:space-y-0 flex-row justify-items-center grid-rows-2 grid-cols-5 auto-rows-min    2xl:justify-between items-center   ">
 
             <div
                 class="border-blue-500 col-span-1 border flex flex-col items-center 2xl:w-full w-[385px] h-[120px] 2xl:h-[150px] bg-card rounded-md shadow-lg">
@@ -665,6 +732,12 @@ const td = 'text-foreground  text-base '
                 class="w-full h-full font-light overflow-auto" :data="gameData.enemyGuildStats"
                 :columns="visibleColumns" :ui="{ th: tableHead, td: td, tr: tr }" />
         </div>
+
+        <!-- <apexchart v-if="displayData && displayData.guildStats && displayData.guildStats.length > 0" width="600"
+            height="600" class="bg-background text-foreground" type="donut" :options="pieChartOptions"
+            :series="displayData.guildStats.map(player => player.average_kd)">
+        </apexchart> -->
+
 
         <!-- spinner loader -->
     </div>

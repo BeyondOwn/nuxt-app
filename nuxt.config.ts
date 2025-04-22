@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
   css: ['@/assets/styles/globals.css'],
-  plugins: ['~/plugins/process'],
+  plugins: ['~/plugins/process', '~/plugins/apexCharts.client'],
   vite: {
     plugins: [tailwindcss()],
   },
@@ -33,8 +33,9 @@ export default defineNuxtConfig({
       login: '/login', // Path to redirect user to for login
       callback: 'https://fcfxbrlvhdcsqawzbvej.supabase.co/auth/v1/callback', // Path Supabase redirects back to after auth
       exclude: [
-        // Paths excluded from automatic auth redirection
-        '/', // Example: Don't protect homepage
+        // Paths excluded from automatic auth redirection // Example: Don't protect homepage
+        '/stats',
+        '/',
         '/register', // Example: Allow access to registration page
         '/api/*', // IMPORTANT: Exclude API routes from CLIENT-SIDE redirect checks
         // We handle API auth on the server-side (middleware/route handler)

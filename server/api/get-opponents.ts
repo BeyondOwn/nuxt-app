@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
       console.log(error)
       return createError({ message: error.message, status: 500 })
     }
-    console.log('opo: ', opponents)
+    // console.log('opo: ', opponents)
     return opponents
   } catch (error) {
     console.log(error)
