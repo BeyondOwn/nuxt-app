@@ -13,6 +13,8 @@ const sorting = ref([
 ])
 const nuxtApp = useNuxtApp();
 
+const loadingData = ref(true);
+
 
 
 const defaultMetrics: CalculatedMetrics = {
@@ -62,7 +64,7 @@ if (opponents.value) {
 }
 
 watch(select, async (value, oldVal) => {
-    if (value != oldVal && select.value) {
+    if (value != oldVal && select.value && !loadingData.value) {
         enemyGuild.value = select.value;
         activeTab.value = '0'
         await getGuildStats();
@@ -80,18 +82,21 @@ watch(activeTab, (newValue, oldValue) => {
             return;
         }
 
-        if (newValue === '0') {
+        if (newValue === '0' && !loadingData.value) {
             console.log("Watcher: Setting displayData to Guild Metrics");
             displayData.value = {
                 ...displayData.value!, // Keep other properties of displayData
                 guildMetrics: gameData.value.guildMetrics ? { ...gameData.value.guildMetrics } : { ...defaultMetrics }
             };
         } else {
-            console.log("Watcher: Setting displayData to Enemy Metrics");
-            displayData.value = {
-                ...displayData.value!, // Keep other properties of displayData
-                guildMetrics: gameData.value.enemyMetrics ? { ...gameData.value.enemyMetrics } : { ...defaultMetrics }
-            };
+            if (!loadingData.value) {
+                console.log("Watcher: Setting displayData to Enemy Metrics");
+                displayData.value = {
+                    ...displayData.value!, // Keep other properties of displayData
+                    guildMetrics: gameData.value.enemyMetrics ? { ...gameData.value.enemyMetrics } : { ...defaultMetrics }
+                };
+            }
+
         }
         // console.log("Watcher: Updated displayData:", displayData.value);
         // console.log("gamedata after tab change: ", gameData.value); // Add this for debugging
@@ -100,7 +105,8 @@ watch(activeTab, (newValue, oldValue) => {
 
 
 const getGuildStats = async () => {
-    const { data, error } = await useAsyncData(`guildStats${enemyGuild.value}`, async () => {
+    loadingData.value = true;
+    const { data, error, status } = await useAsyncData(`guildStats${enemyGuild.value}`, async () => {
         return await $fetch<AllStats>('/api/get-guild-stats', { method: 'POST', body: { guildName: guildName.value, enemyGuild: enemyGuild.value } })
     },
         {
@@ -109,14 +115,16 @@ const getGuildStats = async () => {
             }
         }
     )
-
+    console.log(status.value)
     if (error.value) {
         console.log(error.value);
         return error.value;
     }
     if (data.value) {
+        console.log(status.value)
         gameData.value = data.value;
         displayData.value = data.value;
+        loadingData.value = false;
         // console.log("gamedata: ", gameData.value)
     }
 

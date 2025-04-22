@@ -38,7 +38,7 @@ async function fetchGames() {
     console.log("Fetch games called with page: ")
 
     try {
-        const { data, error } = await useAsyncData(
+        const { data, error, status } = await useAsyncData(
             `allGames`,
             async () => await $fetch<{ data: Database['public']['Tables']['games']['Row'][], count: number }>('/api/get-games', {
                 headers: useRequestHeaders(['cookie']),
@@ -49,6 +49,7 @@ async function fetchGames() {
                 }
             },
         )
+        console.log("status:", status.value)
         if (error.value) {
             fetchError.value = error.value;
             console.error('Error fetching games:', error);
@@ -56,6 +57,7 @@ async function fetchGames() {
         }
         console.log("Data from useAsync: ", data.value)
         if (data.value) {
+            console.log("status:", status.value)
             console.log("Games: ", data.value)
             games.value = data.value?.data; // Replace existing data with the new page
             totalCount.value = data.value.count;
