@@ -727,7 +727,8 @@ const pieChartOptions = computed(() => {
         <div class="flex place-self-start justify-center items-center mt-2 gap-2">
             <USelect class="text-foreground w-48  m-0 h-10 scroll-auto" variant="outline" v-model="select"
                 :items="opponentsRef" />
-            <UTabs v-model="activeTab" color="info" :content="false" :items="[{ label: 'Insecure' }, { label: select }]"
+            <UTabs v-model="activeTab" disabled color="info" :content="false"
+                :items="[{ label: 'Insecure', disabled: loadingData ? true : false }, { label: select, disabled: loadingData ? true : false }]"
                 class="w-full " />
         </div>
 
