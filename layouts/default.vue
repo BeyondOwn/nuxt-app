@@ -4,7 +4,7 @@
 const client = useSupabaseClient();
 const user = await useSupabaseUser();
 const uploaderRef = ref();
-
+// console.log(await client.auth.getSession())
 if (user.value) {
     // console.log("USER ID : ", user.value.id)
     const { data: uploader, error } = await client.

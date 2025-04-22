@@ -23,6 +23,22 @@ const signInWithDiscord = async () => {
 
 };
 
+const signInWithOtp = async () => {
+    const supabase = useSupabaseClient();
+    if (!supabase) return;
+    const { data, error } = await supabase.auth.signInWithOtp({
+        email: email.value,
+        options: {
+            emailRedirectTo: 'https://nuxt-app-puce-gamma.vercel.app/'
+        }
+    })
+    console.log(data)
+    if (error) {
+        console.error("Discord sign in error: ", error)
+    };
+
+};
+
 onMounted(async () => {
     const client = await useSupabaseClient();
     const { data, error } = await client.auth.getUser();
@@ -43,10 +59,8 @@ onMounted(async () => {
             </div>
             <div class="space-y-4">
                 <button @click="signInWithDiscord"
-                    class="w-full flex justify-center py-2 px-4 border border-border rounded-md shadow-sm bg-background text-secondary-foreground hover:bg-background/90 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-ring">
-                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/google/google-original.svg"
-                        alt="Google logo" class="mr-2 h-5 w-5" />
-                    Continue with Google
+                    class="w-full flex gap-1 justify-center py-2 px-4 border border-border rounded-md shadow-sm bg-background text-secondary-foreground hover:bg-background/90 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-ring">
+                    <UIcon size="24" name="logos:discord" />
                 </button>
 
                 <div class="flex items-center justify-center">
@@ -57,9 +71,9 @@ onMounted(async () => {
 
                 <input type="email" v-model="email" placeholder="Email address"
                     class="w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary" />
-                <input type="password" v-model="password" placeholder="Password"
-                    class="w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary" />
-                <button @click="() => signInWithDiscord"
+                <!-- <input type="password" v-model="password" placeholder="Password"
+                    class="w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-primary" /> -->
+                <button @click="signInWithOtp"
                     class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-ring">Continue
                     with email</button>
             </div>

@@ -54,7 +54,7 @@ export default defineEventHandler(async (event: H3Event) => {
     console.log(user.id)
     if (url.startsWith('/api/create-game')) {
       const { data, error } = await client.from('user_roles').select('role_name').eq('user_id', user.id)
-      console.log('data', data)
+      // console.log('data', data)
       if (error) {
         console.log('error')
         throw createError({
@@ -63,7 +63,7 @@ export default defineEventHandler(async (event: H3Event) => {
         })
       }
       if (data.length == 0) {
-        console.log('data length')
+        // console.log('data length')
         throw createError({
           statusCode: 401,
           statusMessage: 'Unauthorized: Access Denied',
