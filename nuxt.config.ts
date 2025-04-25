@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
   },
   colorMode: {
-    preference: 'system',
+    preference: 'dark',
     dataValue: 'theme',
     classSuffix: '',
   },

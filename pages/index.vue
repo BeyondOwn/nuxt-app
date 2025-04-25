@@ -17,6 +17,7 @@ const nuxtApp = useNuxtApp();
 const filter = useState('filter', () => 'all');
 const searchQuery = useState('search', () => '');
 const paginationKey = ref(1);
+const allStats = useState<{ totalGamesConverted: { victory_team: string, defeat_team: string }[] }>('allStats');
 
 
 
@@ -31,11 +32,11 @@ const paginationKey = ref(1);
 
 
 async function fetchGames() {
-    console.log("ReqHeaders: ", useRequestHeaders(['cookie']))
+    // console.log("ReqHeaders: ", useRequestHeaders(['cookie']))
     if (loading.value) return;
     loading.value = true;
     fetchError.value = null;
-    console.log("Fetch games called with page: ")
+    // console.log("Fetch games called with page: ")
 
     try {
         const { data, error, status } = await useAsyncData(
@@ -49,16 +50,16 @@ async function fetchGames() {
                 }
             },
         )
-        console.log("status:", status.value)
+        // console.log("status:", status.value)
         if (error.value) {
             fetchError.value = error.value;
             console.error('Error fetching games:', error);
             return error.value;
         }
-        console.log("Data from useAsync: ", data.value)
+        // console.log("Data from useAsync: ", data.value)
         if (data.value) {
-            console.log("status:", status.value)
-            console.log("Games: ", data.value)
+            // console.log("status:", status.value)
+            // console.log("Games: ", data.value)
             games.value = data.value?.data; // Replace existing data with the new page
             totalCount.value = data.value.count;
         };
@@ -82,8 +83,8 @@ const getStats = async () => {
     if (games.value) {
         totalGames.value = games.value?.length;
         try {
-            const { data: stats, error: statsError } = await useAsyncData('totalStats', async () => {
-                return await $fetch<{ totalGames: number, victories: number, defeats: number, winrate: number }>('/api/get-stats');
+            const { data: stats, error: statsError } = await useAsyncData(`totalStats`, async () => {
+                return await $fetch<{ totalGamesConverted: { victory_team: string, defeat_team: string }[] }>('/api/get-stats');
             },
                 {
                     getCachedData(key) {
@@ -96,11 +97,23 @@ const getStats = async () => {
                 return statsError.value;
             }
 
-            if (stats.value) {
-                totalGames.value = stats.value.totalGames;
-                victories.value = stats.value.victories;
-                defeats.value = stats.value.defeats;
-                winrate.value = stats.value.winrate;
+            if (stats.value && !allStats.value) {
+                allStats.value = stats.value;
+                totalGames.value = allStats.value!.totalGamesConverted.length;
+                // console.log("stats value: ", allStats.value!.totalGamesConverted.length)
+                let vic = 0;
+                let def = 0;
+                allStats.value!.totalGamesConverted.forEach((el: any) => {
+                    if (el.victory_team == 'Insecure') {
+                        vic += 1;
+                    }
+                    else {
+                        def += 1;
+                    }
+                })
+                victories.value = vic;
+                defeats.value = def;
+                winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
             }
 
         } catch (error) {
@@ -142,12 +155,96 @@ watch(() => totalPages.value, () => {
     paginationKey.value++
 })
 
+watch((searchQuery), async () => {
+    if (searchQuery.value == '') {
+        console.log(searchQuery.value, allStats.value)
+        totalGames.value = allStats.value!.totalGamesConverted.length;
+        // console.log("stats value: ", allStats.value!.totalGamesConverted.length)
+        let vic = 0;
+        let def = 0;
+        allStats.value!.totalGamesConverted.forEach((el: any) => {
+            if (el.victory_team == 'Insecure') {
+                vic += 1;
+            }
+            else {
+                def += 1;
+            }
+        })
+        victories.value = vic;
+        defeats.value = def;
+        winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
+    }
+    else {
+        const withQueryName = allStats.value!.totalGamesConverted.filter((el) => {
+            return el.victory_team.toLowerCase().startsWith(searchQuery.value.toLowerCase()) || el.defeat_team.toLowerCase().startsWith(searchQuery.value.toLowerCase())
+        })
+        totalGames.value = withQueryName.length;
+
+        // console.log("stats value: ", withQueryName.length)
+        let vic = 0;
+        let def = 0;
+        withQueryName.forEach((el: any) => {
+            if (el.victory_team == 'Insecure') {
+                vic += 1;
+            }
+            else {
+                def += 1;
+            }
+        })
+        victories.value = vic;
+        defeats.value = def;
+        winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
+    }
+
+
+})
+
 
 
 onMounted(async () => {
     await fetchGames();
     if (games.value.length == 0 || !games.value) fetchGames();
     await getStats();
+
+    if (searchQuery.value == '') {
+        console.log(searchQuery.value, allStats.value)
+        totalGames.value = allStats.value!.totalGamesConverted.length;
+        // console.log("stats value: ", allStats.value!.totalGamesConverted.length)
+        let vic = 0;
+        let def = 0;
+        allStats.value!.totalGamesConverted.forEach((el: any) => {
+            if (el.victory_team == 'Insecure') {
+                vic += 1;
+            }
+            else {
+                def += 1;
+            }
+        })
+        victories.value = vic;
+        defeats.value = def;
+        winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
+    }
+    else {
+        const withQueryName = allStats.value!.totalGamesConverted.filter((el) => {
+            return el.victory_team.toLowerCase().startsWith(searchQuery.value.toLowerCase()) || el.defeat_team.toLowerCase().startsWith(searchQuery.value.toLowerCase())
+        })
+        totalGames.value = withQueryName.length;
+
+        // console.log("stats value: ", withQueryName.length)
+        let vic = 0;
+        let def = 0;
+        withQueryName.forEach((el: any) => {
+            if (el.victory_team == 'Insecure') {
+                vic += 1;
+            }
+            else {
+                def += 1;
+            }
+        })
+        victories.value = vic;
+        defeats.value = def;
+        winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
+    }
     // games.value = sortByDate(games.value, 'date_hour', 'desc');
 })
 
@@ -166,7 +263,7 @@ async function handlePageChange(newPage: number) {
 }
 
 client.channel(`public:games`).on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, async (payload) => {
-    console.log("Payload: ", payload);
+    // console.log("Payload: ", payload);
     await fetchGames();
     // games.value = sortByDate(games.value, 'date_hour', 'desc');
 }).subscribe();
@@ -281,10 +378,10 @@ const pieChartOptions = {
                     <div class="flex flex-col ">
                         <span class="font-bold text-xl" v-if="game.victory_team_name != myGuild">{{
                             game.victory_team_name
-                            }}</span>
+                        }}</span>
                         <span class="font-bold text-xl" v-else-if="game.defeat_team_name != myGuild">{{
                             game.defeat_team_name
-                            }}</span>
+                        }}</span>
                         <span>{{ game.victory_team_score }} - {{ game.defeat_team_score }}</span>
                     </div>
                     <div class="flex flex-row items-center">
