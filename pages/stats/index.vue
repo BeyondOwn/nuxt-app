@@ -734,10 +734,10 @@ const pieChartOptions = computed(() => {
 
         <!-- Table all guild players -->
         <div v-if="activeTab" class="mt-2 w-full h-[600px] overflow-auto ">
-            <UTable v-if="activeTab == '0'" :key="renderKey" v-model:column-pinning="columnPinning"
+            <UTable v-if="activeTab == '0'" :key="renderKey" sticky v-model:column-pinning="columnPinning"
                 v-model:sorting="sorting" class="w-full h-full font-light overflow-auto" :data="gameData.guildStats"
                 :columns="visibleColumns" :ui="{ th: tableHead, td: td, tr: tr }" />
-            <UTable v-else v-model:sorting="sorting" :key="renderKeyU" v-model:column-pinning="columnPinning"
+            <UTable v-else v-model:sorting="sorting" :key="renderKeyU" sticky v-model:column-pinning="columnPinning"
                 class="w-full h-full font-light overflow-auto" :data="gameData.enemyGuildStats"
                 :columns="visibleColumns" :ui="{ th: tableHead, td: td, tr: tr }" />
         </div>
