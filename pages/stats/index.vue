@@ -565,11 +565,11 @@ const pieChartOptions = computed(() => {
 
 <template>
     <div v-if="gameData && displayData"
-        class="h-full 2xl:w-7xl flex flex-col max-w-7xl w-screen  place-self-center items-center overflow-auto ">
+        class="h-full container flex flex-col  w-screen  place-self-center items-center overflow-auto ">
         <span class=" font-bold text-4xl">Guild Stats</span>
         <!-- Top Players Cards -->
         <div
-            class="h-[400px]  2xl:h-[380px] overflow-auto w-full 2xl:max-w-7xl 2xl:grid space-y-4 2xl:gap-x-2 2xl:space-y-0 flex-row justify-items-center grid-rows-2 grid-cols-5 auto-rows-min    2xl:justify-between items-center   ">
+            class="h-[400px]  2xl:h-[380px] overflow-auto w-full  2xl:grid space-y-4 2xl:gap-x-2 2xl:space-y-0 flex-row justify-items-center grid-rows-2 grid-cols-5 auto-rows-min    2xl:justify-between items-center   ">
 
             <div
                 class="border-blue-500 col-span-1 border flex flex-col items-center 2xl:w-full w-[385px] h-[120px] 2xl:h-[150px] bg-card rounded-md shadow-lg">
@@ -750,7 +750,7 @@ const pieChartOptions = computed(() => {
 
         <!-- spinner loader -->
     </div>
-    <div v-else class="h-full 2xl:w-7xl flex flex-col w-screen  place-self-center jutify-center items-center">
+    <div v-else class="h-full container flex flex-col w-screen  place-self-center jutify-center items-center">
         <div class="w-full h-full flex flex-col items-center justify-center">
             <UIcon name="svg-spinners:bars-rotate-fade" size="72" />
         </div>

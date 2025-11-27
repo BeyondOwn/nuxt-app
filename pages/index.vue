@@ -304,10 +304,10 @@ const pieChartOptions = {
         <!-- stats container -->
         <span class="text-4xl font-bold">Total Stats</span>
         <div
-            class="2xl:h-[150px] w-full flex flex-col items-center 2xl:items-baseline 2xl:flex-row  2xl:w-7xl  gap-4  mt-4  ">
+            class="2xl:h-[150px] container flex flex-col items-center 2xl:items-baseline 2xl:flex-row   gap-4  mt-4  ">
 
             <div
-                class="border-blue-500 border flex flex-col items-center w-[385px] 2xl:w-[300px]  h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
+                class="border-blue-500 border flex flex-col items-center w-[360px] 2xl:w-[384px]  h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
                 <div class="flex flex-row items-center gap-2 mt-4">
                     <UIcon class="text-info-500" name="material-symbols:grouped-bar-chart" size="32" />
                     <span class="font-bold text-xl ">Games</span>
@@ -316,7 +316,7 @@ const pieChartOptions = {
                 <span class="font-bold text-4xl h-full flex items-center text-info-500">{{ totalGames }}</span>
             </div>
             <div
-                class="border-blue-500 border flex flex-col items-center w-[385px] 2xl:w-[300px]  h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
+                class="border-blue-500 border flex flex-col items-center w-[360px] 2xl:w-[384px]  h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
                 <div class="flex flex-row items-center gap-2 mt-4">
                     <UIcon class="text-info-500" name="material-symbols:trophy" size="32" />
                     <span class="font-bold text-xl ">Victories</span>
@@ -325,7 +325,7 @@ const pieChartOptions = {
                 <span class="font-bold text-4xl h-full flex items-center text-primary-nuxt">{{ victories }}</span>
             </div>
             <div
-                class="border-blue-500 border flex flex-col items-center w-[385px] 2xl:w-[300px]  h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
+                class="border-blue-500 border flex flex-col items-center w-[360px] 2xl:w-[384px]  h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
                 <div class="flex flex-row items-center gap-2 mt-4">
                     <UIcon class="text-info-500" name="material-symbols:skull" size="32" />
                     <span class="font-bold text-xl">Defeats</span>
@@ -334,7 +334,7 @@ const pieChartOptions = {
                 <span class="font-bold text-4xl h-full flex items-center text-red-500">{{ defeats }}</span>
             </div>
             <div
-                class="border-blue-500 border flex flex-col items-center w-[385px] 2xl:w-[300px] h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
+                class="border-blue-500 border flex flex-col items-center w-[360px] 2xl:w-[384px] h-[120px] 2xl:h-[150px] bg-card  rounded-md shadow-lg hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out">
                 <div class="flex flex-row items-center gap-2 mt-4">
                     <UIcon class="text-info-500" name="material-symbols:percent" size="32" />
                     <span class="font-bold text-xl ">Win Rate</span>
@@ -359,11 +359,11 @@ const pieChartOptions = {
                 class="bg-background" size="md" variant="outline" v-model="searchQuery" />
         </div>
         <div v-if="games"
-            class="2xl:w-7xl grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] auto-rows-min gap-4 mt-4">
+            class="container mx-auto flex flex-col place-items-center 2xl:grid 2xl:grid-cols-3 auto-rows-min gap-6 mt-4">
             <div v-for="game in paginatedGames" :key="game.id" :onclick="() => navigateTo({
                 path: `/${game.id}`
             })"
-                :class="[`${myGuild == game.victory_team_name ? 'border-l-green-500' : 'border-l-red-500'}`, 'hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out  col-span-1 bg-card w-[385px] h-[200px] border-l-4 rounded-l-md shadow-lg  hover:cursor-pointer ']">
+                :class="[`${myGuild == game.victory_team_name ? 'border-l-green-500' : 'border-l-red-500'}`, 'hover:shadow-xl hover:-translate-y-2 transition-transform duration-250 ease-in-out  col-span-1 bg-card min-w-[360px] 2xl:w-[512px] h-[200px] border-l-4 rounded-l-md shadow-lg  hover:cursor-pointer ']">
                 <div class="h-full w-full flex flex-col justify-between p-4">
                     <div class="flex flex-row justify-between items-center text-sm">
                         <date class="text-muted-foreground">

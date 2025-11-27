@@ -2,13 +2,6 @@
 module.exports = {
     content: ['./index.html', './**/*.{vue,js,ts,jsx,tsx}'],
     theme: {
-      container: {
-        center: true,
-        padding: '2rem',
-        screens: {
-          '2xl': '1400px',
-        },
-      },
       extend: {
         colors: {
           primaryNuxt: 'var(--ui-primary)',
@@ -87,6 +80,7 @@ module.exports = {
           'accordion-up': 'accordion-up 0.2s ease-out',
         },
         fontFamily: {
+            poppinstnum:['var(--font-poppins-tnum)'],
             montserrat:['var(--font-montserrat)'],
             poppins: ['var(--font-poppins)'],
             khand: ['var(--font-khand)'],
@@ -98,6 +92,15 @@ module.exports = {
     variants: {
       extend: {},
     },
-    plugins: [],
+    plugins: [
+      function ({ addUtilities }) {
+        addUtilities({
+          '.tnum': {
+            fontFeatureSettings: '"tnum"',
+            fontFamily: 'var(--font-poppins-tnum)', // important
+          },
+        })
+      }
+    ],
   }
   

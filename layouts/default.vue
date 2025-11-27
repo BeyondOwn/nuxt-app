@@ -27,8 +27,8 @@ watch(theme, () => {
 </script>
 <template>
     <div class="font-poppins text-foreground bg-background">
-        <nav class="h-[40px] w-screen  bg-info-500 flex flex-col justify-center ">
-            <div class="2xl:w-7xl w-100vw 2xl:place-self-center flex flex-row items-center py-2 justify-between">
+        <nav class="h-[40px] w-screen  bg-emerald-600 flex flex-col justify-center ">
+            <div class="container w-100vw 2xl:place-self-center flex flex-row items-center py-2 justify-between">
                 <div class="space-x-2">
                     <NuxtLink to="/">Scoreboards</NuxtLink>
                     <!-- <NuxtLink to="/about">About</NuxtLink>
@@ -36,6 +36,7 @@ watch(theme, () => {
                     <NuxtLink to="/stats">Stats</NuxtLink>
                     <NuxtLink v-if="!user" to="/login">Login</NuxtLink>
                     <NuxtLink v-if="uploaderRef" to="/upload">Upload</NuxtLink>
+                    <NuxtLink v-if="user" to="/combat-logger">Combat Logger</NuxtLink>
                 </div>
                 <div class="flex flex-row justify-center items-center">
                     <UButton v-if="user" @click="client.auth.signOut()" variant="outline" class="text-foreground">Logout

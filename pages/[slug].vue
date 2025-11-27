@@ -214,7 +214,7 @@ const sortingDefeat = ref([
 <template>
     <div class="grid grid-cols-12  w-full place-items-center text-foreground overflow-auto px-4  ">
         <div v-if="queryParams"
-            class="text-2xl col-span-12 font-semibold w-[90%] 2xl:w-7xl flex flex-row  gap-4 relative">
+            class="text-2xl col-span-12 font-semibold  container flex flex-row  gap-4 relative">
             <div @click="$router.back"
                 class="h-8 w-8 rounded-xl absolute -left-10 justify-items-center place-items-center hover:bg-accent">
                 <UIcon size="32" name="material-symbols:arrow-back" />
@@ -226,13 +226,13 @@ const sortingDefeat = ref([
             <span>Score: {{ queryParams?.victory_team_score }} - {{ queryParams?.defeat_team_score }}</span>
             <span class=" ml-auto">{{ queryParams?.date_hour }}</span>
         </div>
-        <div v-if="!loading" class="col-span-12  flex flex-col 2xl:flex-row mt-2  gap-4 w-[90%]  2xl:w-7xl  ">
+        <div v-if="!loading" class="col-span-12  flex flex-col 2xl:flex-row mt-2  gap-4   container  ">
             <div class="flex flex-col items-center    ">
                 <div class="w-full flex flex-col items-center bg-purple-500 dark:bg-purple-700">
                     <span class="font-bold text-green-500">[Victory] {{ queryParams?.victory_team_name }}</span>
                 </div>
                 <UTable v-model:sorting="sortingVictory" :ui="{ td: td, tr: tableUI, th: tableHead }"
-                    class=" w-full 2xl:w-[635px] font-light overflow-auto" :data="victoryTableData"
+                    class=" w-full 2xl:w-[760px] font-light overflow-auto" :data="victoryTableData"
                     :columns="columns" />
             </div>
 
@@ -241,7 +241,7 @@ const sortingDefeat = ref([
                     <span class="font-bold text-red-500">[Defeat] {{ queryParams?.defeat_team_name }}</span>
                 </div>
                 <UTable v-model:sorting="sortingDefeat" :ui="{ td: td, tr: tableUI, th: tableHead }"
-                    class="w-full 2xl:w-[635px] font-light overflow-auto" :data="defeatTableData" :columns="columns" />
+                    class="w-full 2xl:w-[760px] font-light overflow-auto" :data="defeatTableData" :columns="columns" />
             </div>
         </div>
     </div>

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @config "../../tailwind.config.js";
+@import 'primeicons/primeicons.css';
 @import "@nuxt/ui";
 
 @layer base {
@@ -35,10 +36,12 @@
     --color-green-900: #0A5331;
     --color-green-950: #052E16;
   }
+
   
   @layer base {
     :root, .light {
       --font-poppins: 'Poppins', sans-serif;
+      --font-poppins-tnum: 'Poppins', 'Roboto', sans-serif;
       --font-montserrat: 'Montserrat', sans-serif;
       --background: 240 5% 96%;
       --foreground: 240 10% 3.9%;
