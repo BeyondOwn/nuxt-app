@@ -2,7 +2,10 @@
 import Aura from '@primeuix/themes/aura';
 import tailwindcss from '@tailwindcss/vite';
 export default defineNuxtConfig({
-  compatibilityDate: '2024-11-01',
+  compatibilityDate: '2024-11-27',
+  nitro:{
+    preset:'cloudflare-pages'
+  },
   devtools: { enabled: true },
   css: ['@/assets/styles/globals.css'],
   plugins: ['~/plugins/process', '~/plugins/apexCharts.client'],
