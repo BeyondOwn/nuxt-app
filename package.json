@@ -31,7 +31,7 @@
     "eslint": "^9.24.0",
     "lodash.debounce": "^4.0.8",
     "lucide-vue-next": "^0.488.0",
-    "nuxt": "^4.2.1",
+    "nuxt": "^3.20.1",
     "primeicons": "^7.0.0",
     "primevue": "^4.4.1",
     "typescript": "^5.8.3",
