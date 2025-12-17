@@ -54,7 +54,7 @@ export interface ClassIcon {
 //   };
   
   export const SPRITE_CONFIG = {
-    url: 'https://s1.pearlcdn.com/NAEU/contents/img/common/character/icn_class_symbol_spr.svg',
+    url: '/icn_class_symbol_spr.svg',
     iconSize: 28,
     spriteSize: 84,
   } as const;

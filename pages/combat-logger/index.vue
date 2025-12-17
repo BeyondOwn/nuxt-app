@@ -57,7 +57,7 @@ try {
         const { data, error, status } = await useAsyncData(
             `allCombatLogs`,
             async () => await $fetch<{ data: Database['public']['Tables']['combat_logs']['Row'][]}>('/api/get-combat-log', {
-                headers: useRequestHeaders(['cookie']),
+                headers: useRequestHeaders(['cookie']),method:"POST",
             }),
             {
                 getCachedData(key) {

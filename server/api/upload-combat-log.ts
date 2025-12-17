@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server';
 import type { Database } from '~/types/supabase';
+
 export default defineEventHandler(async (event) => {
   const supabase = await serverSupabaseClient<Database>(event)
   const formData = await readMultipartFormData(event);
@@ -9,6 +10,58 @@ export default defineEventHandler(async (event) => {
   const timestamps: number[] = [];
   const uniqueFamilyNames = new Set<string>();
   const uniqueGuilds = new Set<string>();
+
+  const killMatrix: {
+    [familyName:string]:{
+    [killerChar: string]: {
+      [victimChar: string]: number
+    }
+  }
+  } = {};
+
+  const deathMatrix: {
+    [familyName: string]: {
+      [victimChar: string]: {
+        [killerFamily: string]: number
+      }
+    }
+  } = {};
+
+
+  
+ // Updated recordKill function
+ const recordKill = (
+  killerFamily: string,
+  killerChar: string,
+  victimFamily: string,
+  victimChar: string
+) => {
+
+  // --- KILL MATRIX (existing logic) ---
+  if (!killMatrix[killerFamily]) {
+    killMatrix[killerFamily] = {};
+  }
+  if (!killMatrix[killerFamily][killerChar]) {
+    killMatrix[killerFamily][killerChar] = {};
+  }
+  if (!killMatrix[killerFamily][killerChar][victimFamily]) {
+    killMatrix[killerFamily][killerChar][victimFamily] = 0;
+  }
+  killMatrix[killerFamily][killerChar][victimFamily]++;
+
+
+  // --- NEW: DEATH MATRIX (reverse tracking) ---
+  if (!deathMatrix[victimFamily]) {
+    deathMatrix[victimFamily] = {};
+  }
+  if (!deathMatrix[victimFamily][victimChar]) {
+    deathMatrix[victimFamily][victimChar] = {};
+  }
+  if (!deathMatrix[victimFamily][victimChar][killerFamily]) {
+    deathMatrix[victimFamily][victimChar][killerFamily] = 0;
+  }
+  deathMatrix[victimFamily][victimChar][killerFamily]++;
+};
 
   const timestampRegex = /\[(\d{2}):(\d{2}):(\d{2})\]/;
   
@@ -67,13 +120,18 @@ export default defineEventHandler(async (event) => {
     const fileContent: string = fileBuffer.toString('utf-8');
     const lines = fileContent.split('\n');
 
-    // ⭐ CHANGED: Track stats by CHARACTER NAME instead of family name
+    // UPDATED: Track stats with K/D and timestamps
     const playerStats : {
         [charName: string]: {
           family_name: string,
           kills: number, 
           deaths: number, 
-          guild: string
+          guild: string,
+          kd: number,  // NEW
+          first_seen: number | null,  // NEW: first timestamp in minutes
+          last_seen: number | null,   // NEW: last timestamp in minutes
+          join_duration: number,      // NEW: duration in minutes
+          performance: number         // NEW: performance score
         } 
     } = {};
 
@@ -86,9 +144,34 @@ export default defineEventHandler(async (event) => {
               family_name: familyName,
               kills: 0, 
               deaths: 0, 
-              guild: guildName
+              guild: guildName,
+              kd: 0,
+              first_seen: null,
+              last_seen: null,
+              join_duration: 0,
+              performance: 0
             }
         }
+    }
+
+    // Helper to update player timestamp
+    const updatePlayerTimestamp = (charName: string, timestamp: number) => {
+        if (playerStats[charName].first_seen === null) {
+            playerStats[charName].first_seen = timestamp;
+        }
+        playerStats[charName].last_seen = timestamp;
+    }
+
+    // Helper to convert timestamp to minutes
+    const parseTimestamp = (line: string): number | null => {
+        const timeMatch = line.match(timestampRegex);
+        if (timeMatch) {
+            const hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2]);
+            const seconds = parseInt(timeMatch[3]);
+            return hours * 60 + minutes + seconds / 60;
+        }
+        return null;
     }
 
     const killRegex = /\[\d{2}:\d{2}:\d{2}\] (\w+) has killed (\w+) from /;
@@ -99,78 +182,107 @@ export default defineEventHandler(async (event) => {
     for (const line of lines) {
       if (line.trim() === '') continue;
 
-      // Extract timestamp
-    const timeMatch = line.match(timestampRegex);
-    if (timeMatch) {
-      const hours = parseInt(timeMatch[1]);
-      const minutes = parseInt(timeMatch[2]);
-      const seconds = parseInt(timeMatch[3]);
-      const totalMinutes = hours * 60 + minutes + seconds / 60;
-      timestamps.push(totalMinutes);
+      // Extract timestamp for global tracking
+      const timestamp = parseTimestamp(line);
+      if (timestamp !== null) {
+        timestamps.push(timestamp);
+      }
+
+      // A. Check for a KILL event
+      let match = line.match(killRegex);
+      if (match) {
+          const killerFamily = match[1];
+          const victimFamily = match[2];
+
+          uniqueFamilyNames.add(match[1]);
+          uniqueFamilyNames.add(match[2]);
+
+          const charMatch = line.match(charNamesRegex);
+          if (charMatch) {
+              const victimChar = charMatch[1].trim();
+              const killerChar = charMatch[2].trim();
+              
+              charToFamilyMap.set(victimChar, victimFamily);
+              charToFamilyMap.set(killerChar, killerFamily);
+              
+              initializePlayer(killerChar, killerFamily);
+              initializePlayer(victimChar, victimFamily);
+              
+              // Update timestamps
+              if (timestamp !== null) {
+                  updatePlayerTimestamp(killerChar, timestamp);
+                  updatePlayerTimestamp(victimChar, timestamp);
+              }
+              
+              playerStats[killerChar].kills++;
+              playerStats[victimChar].deaths++;
+
+              recordKill(killerFamily, killerChar, victimFamily, victimChar);
+              
+              const matchGuild = line.match(guildRegex);
+              if (matchGuild) playerStats[victimChar].guild = matchGuild[0];
+          }
+          continue;
+      }
+  
+      // B. Check for a DEATH event
+      match = line.match(deathRegex);
+      if (match) {
+          const victimFamily = match[1];
+          const killerFamily = match[2];
+
+          uniqueFamilyNames.add(match[1]);
+          uniqueFamilyNames.add(match[2]);
+
+          const charMatch = line.match(charNamesRegex);
+          if (charMatch) {
+              const victimChar = charMatch[2].trim();
+              const killerChar = charMatch[1].trim();
+              
+              charToFamilyMap.set(victimChar, victimFamily);
+              charToFamilyMap.set(killerChar, killerFamily);
+              
+              initializePlayer(victimChar, victimFamily);
+              initializePlayer(killerChar, killerFamily);
+              
+              // Update timestamps
+              if (timestamp !== null) {
+                  updatePlayerTimestamp(victimChar, timestamp);
+                  updatePlayerTimestamp(killerChar, timestamp);
+              }
+              
+              playerStats[victimChar].deaths++;
+              playerStats[killerChar].kills++;
+
+              recordKill(killerFamily, killerChar, victimFamily, victimChar);
+              
+              const matchGuild = line.match(guildRegex);
+              if (matchGuild) playerStats[killerChar].guild = matchGuild[0];
+          }
+          continue;
+      }
     }
-    
 
-        // A. Check for a KILL event
-        let match = line.match(killRegex);
-        if (match) {
-            const killerFamily = match[1];
-            const victimFamily = match[2];
-
-            uniqueFamilyNames.add(match[1]); // killer family
-            uniqueFamilyNames.add(match[2]); // victim family
-
-            // Extract character names
-            const charMatch = line.match(charNamesRegex);
-            if (charMatch) {
-                const victimChar = charMatch[1].trim();
-                const killerChar = charMatch[2].trim();
-                
-                // Map characters to families
-                charToFamilyMap.set(victimChar, victimFamily);
-                charToFamilyMap.set(killerChar, killerFamily);
-                
-                // Initialize players by CHARACTER NAME
-                initializePlayer(killerChar, killerFamily);
-                initializePlayer(victimChar, victimFamily);
-                
-                // Update stats by CHARACTER NAME
-                playerStats[killerChar].kills++;
-                playerStats[victimChar].deaths++;
-                
-                const matchGuild = line.match(guildRegex);
-                if (matchGuild) playerStats[victimChar].guild = matchGuild[0];
-            }
-            continue;
+    // Find max kills for performance calculation
+    let maxKills = 0;
+    for (const stats of Object.values(playerStats)) {
+        if (stats.kills > maxKills) {
+            maxKills = stats.kills;
         }
-    
-        // B. Check for a DEATH event
-        match = line.match(deathRegex);
-        if (match) {
-            const victimFamily = match[1];
-            const killerFamily = match[2];
+    }
 
-            uniqueFamilyNames.add(match[1]); // victim family
-            uniqueFamilyNames.add(match[2]); // killer family
-
-            const charMatch = line.match(charNamesRegex);
-            if (charMatch) {
-                const victimChar = charMatch[2].trim();
-                const killerChar = charMatch[1].trim();
-                
-                charToFamilyMap.set(victimChar, victimFamily);
-                charToFamilyMap.set(killerChar, killerFamily);
-                
-                initializePlayer(victimChar, victimFamily);
-                initializePlayer(killerChar, killerFamily);
-                
-                playerStats[victimChar].deaths++;
-                playerStats[killerChar].kills++;
-                
-                const matchGuild = line.match(guildRegex);
-                if (matchGuild) playerStats[killerChar].guild = matchGuild[0];
-            }
-            continue;
+    // Calculate K/D, join_duration, and performance for all players
+    for (const [charName, stats] of Object.entries(playerStats)) {
+        // Calculate K/D ratio
+        stats.kd = stats.deaths === 0 ? stats.kills : parseFloat((stats.kills / stats.deaths).toFixed(2));
+        
+        // Calculate join_duration
+        if (stats.first_seen !== null && stats.last_seen !== null) {
+            stats.join_duration = Math.round(stats.last_seen - stats.first_seen);
         }
+
+        // Calculate performance (normalized to top player)
+        stats.performance = maxKills > 0 ? parseFloat(((stats.kills / maxKills) * 100).toFixed(2)) : 0;
     }
 
     const statsToInsert: { 
@@ -179,6 +291,9 @@ export default defineEventHandler(async (event) => {
         family_name: string, 
         kills: number, 
         deaths: number,
+        kd: number,  // NEW
+        join_duration: number,  // NEW
+        performance:number,
         guild: string,
         class: string
         type: string,
@@ -255,7 +370,6 @@ export default defineEventHandler(async (event) => {
           };
         } catch (error) {
           console.error(`Scraping failed for ${character.char_name}, inserting as Unknown:`, error);
-          // Return Unknown instead of throwing
           return {
             char_name: character.char_name,
             family_name: character.family_name,
@@ -294,7 +408,10 @@ export default defineEventHandler(async (event) => {
         type:type,
         duration: durationMinutes,
         total_guilds:totalGuilds,
-        total_players: totalCharacters,})
+        total_players: totalCharacters,
+        kill_matrix:killMatrix,
+        death_matrix:deathMatrix,
+      })
       .select('*');
 
     if (dbError) {
@@ -306,10 +423,8 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // ⭐ CHANGED: Get character names from playerStats
     const characterNamesInLog = Object.keys(playerStats);
 
-    // ⭐ CHANGED: Fetch class by char_name instead of family_name
     const { data: classData, error: classQueryError } = await supabase
       .from('player_class')
       .select('char_name, class')
@@ -321,7 +436,6 @@ export default defineEventHandler(async (event) => {
 
     console.log("Class Data: ", classData);
 
-    // ⭐ CHANGED: Map by char_name instead of family_name
     const charClassMap = new Map<string, string>();
     if (classData) {
       for (const row of classData) {
@@ -329,7 +443,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ⭐ CHANGED: Loop through CHARACTER stats, not family stats
     for (const [char_name, stats] of Object.entries(playerStats)) {
       const playerClass = charClassMap.get(char_name) || 'Unknown';
       
@@ -339,6 +452,9 @@ export default defineEventHandler(async (event) => {
         family_name: stats.family_name,
         kills: stats.kills,
         deaths: stats.deaths,
+        kd: stats.kd,  // NEW
+        performance:stats.performance,
+        join_duration: stats.join_duration,  // NEW
         guild: stats.guild,
         class: playerClass,
         title: logName,
