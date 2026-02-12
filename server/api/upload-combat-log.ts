@@ -27,6 +27,25 @@ export default defineEventHandler(async (event) => {
     }
   } = {};
 
+  // Helper function to send SSE events
+  const sendEvent = (eventType: string, data: any) => {
+    if (event.node.res.writable) {
+      event.node.res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
+  };
+
+  // Check if client wants SSE (look for Accept header or query param)
+  const acceptHeader = getHeader(event, 'accept') || '';
+  const useSSE = acceptHeader.includes('text/event-stream') || getQuery(event).stream === 'true';
+
+  if (useSSE) {
+    // Set up SSE headers
+    setResponseHeaders(event, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    });
+  }
 
   
  // Updated recordKill function
@@ -100,6 +119,8 @@ export default defineEventHandler(async (event) => {
   }
   
   try {
+    sendEvent('progress', { stage: 'parsing', message: 'Reading uploaded file...' });
+
     const inc = await readMultipartFormData(event);
     if (!inc || inc.length === 0) {
       console.log('No file uploaded')
@@ -119,6 +140,8 @@ export default defineEventHandler(async (event) => {
 
     const fileContent: string = fileBuffer.toString('utf-8');
     const lines = fileContent.split('\n');
+
+    sendEvent('progress', { stage: 'parsing', message: `Parsing ${lines.length} lines from log file...` });
 
     // UPDATED: Track stats with K/D and timestamps
     const playerStats : {
@@ -263,6 +286,8 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    sendEvent('progress', { stage: 'calculating', message: 'Calculating player statistics...' });
+
     // Find max kills for performance calculation
     let maxKills = 0;
     for (const stats of Object.values(playerStats)) {
@@ -323,15 +348,23 @@ export default defineEventHandler(async (event) => {
     console.log(`Total Guilds: ${Array.from(uniqueGuilds)}`);
     console.log(`Total Players: ${totalCharacters}`);
 
+    sendEvent('progress', { 
+      stage: 'summary', 
+      message: `Found ${totalCharacters} players from ${totalGuilds} guilds`,
+      data: { totalCharacters, totalGuilds, durationMinutes }
+    });
+
     // Get unique character names
     const characterNamesArray = Array.from(charToFamilyMap.keys());
     console.log("Character to Family mapping:", Object.fromEntries(charToFamilyMap));
     console.log("Unique character names:", characterNamesArray);
 
+    sendEvent('progress', { stage: 'database', message: 'Checking existing player data...' });
+
     // Check which characters already exist in the database
     const { data: existingChars, error: queryError } = await supabase
       .from('player_class')
-      .select('char_name')
+      .select('char_name, class')
       .in('char_name', characterNamesArray);
 
     if (queryError) {
@@ -342,27 +375,66 @@ export default defineEventHandler(async (event) => {
     const existingCharNamesinDb = new Set(existingChars.map(row => row.char_name));
     console.log("Existing characters in DB:", Array.from(existingCharNamesinDb));
 
+    const unknownClassChars = new Set(
+      existingChars
+        .filter(row => row.class === "Unknown")
+        .map(row => row.char_name)
+    );
+
     const charactersToInsert: Array<{
       char_name: string;
       family_name: string;
       class: string;
     }> = [];
 
+    console.log("Unkown chars: ",unknownClassChars);
+
     const charsToProcess = Array.from(charToFamilyMap.entries())
-      .filter(([char_name]) => !existingCharNamesinDb.has(char_name))
-      .map(([char_name, family_name]) => ({ char_name, family_name }));
+    .filter(([char_name]) => 
+    !existingCharNamesinDb.has(char_name) || unknownClassChars.has(char_name)
+    )
+    .map(([char_name, family_name]) => ({ char_name, family_name }));
+
+    if (charsToProcess.length > 0) {
+      sendEvent('progress', { 
+        stage: 'scraping', 
+        message: `Fetching class data for ${charsToProcess.length} players...`,
+        total: charsToProcess.length
+      });
+    }
 
     const DELAY_MS = 10;
     const MAX_RETRIES = 3;
+    const MAX_REQUESTS_PER_MINUTE = 40;
 
     const { results, errors, successCount, failureCount } = await processSequentially(
       charsToProcess,
-      async (character) => {
+      async (character, index) => {
+        const progressMsg = `Processing ${index + 1}/${charsToProcess.length}`;
+        console.log(progressMsg);
         console.log(`DEBUG: Processing char_name="${character.char_name}", family_name="${character.family_name}"`);
+        
+        // Send progress update
+        sendEvent('progress', { 
+          stage: 'scraping', 
+          message: `${progressMsg} - ${character.char_name}`,
+          current: index + 1,
+          total: charsToProcess.length,
+          charName: character.char_name,
+          familyName: character.family_name
+        });
         
         try {
           const playerData = await scrapePlayerClass(character.family_name, character.char_name);
           
+          sendEvent('progress', { 
+            stage: 'scraping', 
+            message: `✓ Successfully processed ${character.char_name}`,
+            current: index + 1,
+            total: charsToProcess.length,
+            success: true
+          });
+
           return {
             char_name: character.char_name,
             family_name: character.family_name,
@@ -370,6 +442,15 @@ export default defineEventHandler(async (event) => {
           };
         } catch (error) {
           console.error(`Scraping failed for ${character.char_name}, inserting as Unknown:`, error);
+          
+          sendEvent('progress', { 
+            stage: 'scraping', 
+            message: `⚠ Failed to fetch data for ${character.char_name}, using Unknown`,
+            current: index + 1,
+            total: charsToProcess.length,
+            success: false
+          });
+
           return {
             char_name: character.char_name,
             family_name: character.family_name,
@@ -378,7 +459,8 @@ export default defineEventHandler(async (event) => {
         }
       },
       DELAY_MS,
-      MAX_RETRIES
+      MAX_RETRIES,
+      MAX_REQUESTS_PER_MINUTE,
     );
 
     charactersToInsert.push(...results);
@@ -387,9 +469,17 @@ export default defineEventHandler(async (event) => {
     console.log("Records ready for insertion:", charactersToInsert);
 
     if (charactersToInsert.length > 0) {
+      sendEvent('progress', { 
+        stage: 'database', 
+        message: `Saving ${charactersToInsert.length} player records...` 
+      });
+
       const { data: insertedData, error: insertError } = await supabase
         .from('player_class')
-        .insert(charactersToInsert);
+        .upsert(charactersToInsert, {
+          onConflict: 'family_name,char_name',
+          ignoreDuplicates: false
+        });
 
       if (insertError) {
         console.error("Error inserting new characters:", insertError);
@@ -399,6 +489,8 @@ export default defineEventHandler(async (event) => {
     } else {
       console.log("All characters already exist. No records inserted.");
     }
+
+    sendEvent('progress', { stage: 'database', message: 'Saving combat log...' });
 
     // Insert combat log
     const { data: insertCombatLog, error: dbError } = await supabase
@@ -452,9 +544,9 @@ export default defineEventHandler(async (event) => {
         family_name: stats.family_name,
         kills: stats.kills,
         deaths: stats.deaths,
-        kd: stats.kd,  // NEW
+        kd: stats.kd,
         performance:stats.performance,
-        join_duration: stats.join_duration,  // NEW
+        join_duration: stats.join_duration,
         guild: stats.guild,
         class: playerClass,
         title: logName,
@@ -463,6 +555,8 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log("Player stats: ", playerStats, "Length: ", Object.keys(playerStats).length);
+
+    sendEvent('progress', { stage: 'database', message: 'Saving player statistics...' });
 
     const { data: insertedCombatLogStats, error: dbError2 } = await supabase
       .from('combat_logs_stats')
@@ -478,9 +572,32 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    sendEvent('complete', { 
+      stage:'complete',
+      message: 'Upload complete!',
+      gameId: insertCombatLog[0].id 
+    });
+
+    // Close the connection for SSE
+    if (useSSE) {
+      event.node.res.end();
+      return;
+    }
+
     return insertCombatLog[0].id;
   } catch (error) {
     console.log(error)
+    
+    sendEvent('error', { 
+      message: 'Error processing log file',
+      error: (error as Error).message 
+    });
+
+    if (useSSE) {
+      event.node.res.end();
+      return;
+    }
+
     createError({
       statusCode: 500,
       message: "Error during processing the .log file",

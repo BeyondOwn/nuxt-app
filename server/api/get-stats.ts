@@ -1,26 +1,38 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { Database } from '~/types/supabase'
+
 export default defineEventHandler(async (event) => {
   const supabase = await serverSupabaseClient<Database>(event)
+  
+  // Extract season from the query
+  const query = getQuery(event)
+  const season = query.season as string
+
   if (!supabase) {
     event.node.res.statusCode = 500
     return { error: 'Failed to initialize Supabase client' }
   }
+
   try {
-    const { data: totalGames, error } = await supabase.from('games').select('*', { count: 'exact' })
+    // Added season check to totalGames query
+    let totalGamesQuery = supabase.from('games').select('*', { count: 'exact' })
+    if (season) totalGamesQuery = totalGamesQuery.eq('season', season)
+    
+    const { data: totalGames, error } = await totalGamesQuery
 
     if (error) {
       return error
     }
 
-    const { error: dataError, data: victories } = await supabase.from('games').select('*', { count: 'exact' }).eq('victory_team_name', 'Insecure')
+    // Added season check to victories query
+    let victoriesQuery = supabase.from('games').select('*', { count: 'exact' }).eq('victory_team_name', 'Insecure')
+    if (season) victoriesQuery = victoriesQuery.eq('season', season)
+
+    const { error: dataError, data: victories } = await victoriesQuery
 
     if (dataError) return dataError
 
     if (!totalGames || !victories) return createError({ message: 'no totalGames or Victories', statusCode: 500 })
-    // const defeats = totalGames - victories
-
-    // const winrate = Math.trunc((victories / totalGames) * 100)
 
     const totalGamesConverted = totalGames.map((el) => {
       return {
@@ -31,9 +43,6 @@ export default defineEventHandler(async (event) => {
 
     return {
       totalGamesConverted,
-      // victories,
-      // defeats,
-      // winrate,
     }
   } catch (error) {
     event.node.res.statusCode = 500

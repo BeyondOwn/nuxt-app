@@ -30,16 +30,22 @@ const gameData = ref<AllStats | null>(null);
 const displayData = ref<AllStats>();
 const opponentsRef = ref<string[]>(['All']);
 const test = ref(['a', 'b', 'c'])
-const select = ref<string>()
+const select = useState('currentOpponent',()=>'All');
 const activeTab = ref('0');
 const renderKey = ref(0);
 const renderKeyU = ref(0);
+const seasonArray = ref(['S2 2025','S1 2025']);
+const season = useState('currentSeason',()=>'S2 2025');
 
 
 
-
-const { data: opponents, error: opponentsError } = await useAsyncData('opponents', async () => {
-    return await $fetch<{ enemy_guild: string }[]>('/api/get-opponents');
+const getOpponents = async () =>{
+    const { data: opponents, error: opponentsError } = await useAsyncData(`opponents${season.value}`, async () => {
+    return await $fetch<{ enemy_guild: string }[]>('/api/get-opponents',{
+        query:{
+            season:season.value
+        }
+    });
 },
     {
         getCachedData(key) {
@@ -51,6 +57,7 @@ if (opponentsError.value) {
     console.log(opponentsError.value)
 }
 if (opponents.value) {
+    opponentsRef.value = ['All'];
     const newArray = opponents.value.map((item) => item.enemy_guild)
     const uniqueOpponents = new Set(newArray);
     uniqueOpponents.forEach(element => {
@@ -62,6 +69,8 @@ if (opponents.value) {
     });
     select.value = opponentsRef.value[0]
 }
+}
+
 
 watch(select, async (value, oldVal) => {
     if (value != oldVal && select.value && !loadingData.value) {
@@ -106,8 +115,13 @@ watch(activeTab, (newValue, oldValue) => {
 
 const getGuildStats = async () => {
     loadingData.value = true;
-    const { data, error, status } = await useAsyncData(`guildStats${enemyGuild.value}`, async () => {
-        return await $fetch<AllStats>('/api/get-guild-stats', { method: 'POST', body: { guildName: guildName.value, enemyGuild: enemyGuild.value } })
+    const { data, error, status } = await useAsyncData(`guildStats${enemyGuild.value}${season.value}`, async () => {
+        return await $fetch<AllStats>('/api/get-guild-stats', { method: 'POST', 
+            body: { 
+                guildName: guildName.value, 
+                enemyGuild: enemyGuild.value,
+                season:season.value
+         } })
     },
         {
             getCachedData(key) {
@@ -130,11 +144,23 @@ const getGuildStats = async () => {
 
 }
 
-onMounted(async () => {
-    await getGuildStats();
-    if (!gameData.value) await getGuildStats();
-    // console.log("gamedata: ", gameData.value)
-})
+    onMounted(async () => {
+        await getGuildStats();
+        await getOpponents();
+        if (!gameData.value) await getGuildStats();
+        // console.log("gamedata: ", gameData.value)
+    })
+
+    watch(season, async (newSeason, oldSeason) => {
+        if (newSeason !== oldSeason && !loadingData.value) {
+            console.log(`Season changed to ${newSeason}, refetching stats...`);
+            // Reset active tab to Guild view when season changes if preferred
+            activeTab.value = '0'; 
+            await getGuildStats();
+            await getOpponents();
+
+        }
+    });
 
 const visibleColumns: TableColumn<Database['public']['Tables']['aggregated_stats_total']['Row']>[] = [
     {
@@ -725,6 +751,8 @@ const pieChartOptions = computed(() => {
         </div>
 
         <div class="flex place-self-start justify-center items-center mt-2 gap-2">
+            <USelect class="text-foreground w-48  m-0 h-10 scroll-auto" variant="outline" v-model="season"
+                :items="seasonArray" />
             <USelect class="text-foreground w-48  m-0 h-10 scroll-auto" variant="outline" v-model="select"
                 :items="opponentsRef" />
             <UTabs v-model="activeTab" disabled color="info" :content="false"

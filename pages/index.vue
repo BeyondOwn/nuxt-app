@@ -18,6 +18,8 @@ const filter = useState('filter', () => 'all');
 const searchQuery = useState('search', () => '');
 const paginationKey = ref(1);
 const allStats = useState<{ totalGamesConverted: { victory_team: string, defeat_team: string }[] }>('allStats');
+const seasonArray = ref(['S2 2025', 'S1 2025'])
+const season = useState('currentSeason', ()=>'S2 2025')
 
 
 
@@ -32,40 +34,35 @@ const allStats = useState<{ totalGamesConverted: { victory_team: string, defeat_
 
 
 async function fetchGames() {
-    // console.log("ReqHeaders: ", useRequestHeaders(['cookie']))
     if (loading.value) return;
     loading.value = true;
     fetchError.value = null;
-    // console.log("Fetch games called with page: ")
 
     try {
-        const { data, error, status } = await useAsyncData(
-            `allGames`,
+        const { data, error } = await useAsyncData(
+            `allGames-${season.value}`, // UNIQUE KEY
             async () => await $fetch<{ data: Database['public']['Tables']['games']['Row'][], count: number }>('/api/get-games', {
                 headers: useRequestHeaders(['cookie']),
+                query: { season: season.value }
             }),
             {
                 getCachedData(key) {
                     return nuxtApp.payload.data[key] || nuxtApp.static.data[key]
                 }
-            },
+            }
         )
-        // console.log("status:", status.value)
+        
         if (error.value) {
             fetchError.value = error.value;
-            console.error('Error fetching games:', error);
-            return error.value;
+            return;
         }
-        // console.log("Data from useAsync: ", data.value)
+
         if (data.value) {
-            // console.log("status:", status.value)
-            // console.log("Games: ", data.value)
-            games.value = data.value?.data; // Replace existing data with the new page
+            games.value = data.value.data;
             totalCount.value = data.value.count;
-        };
+        }
     } catch (error: any) {
         fetchError.value = error;
-        console.error('An unexpected error occurred:', error);
     } finally {
         loading.value = false;
     }
@@ -77,48 +74,35 @@ const client = await useSupabaseClient();
 
 
 const getStats = async () => {
+    // Reset values for new calculation
     totalGames.value = 0;
     victories.value = 0;
     defeats.value = 0;
-    if (games.value) {
-        totalGames.value = games.value?.length;
-        try {
-            const { data: stats, error: statsError } = await useAsyncData(`totalStats`, async () => {
-                return await $fetch<{ totalGamesConverted: { victory_team: string, defeat_team: string }[] }>('/api/get-stats');
+
+    try {
+        const { data: stats, error: statsError } = await useAsyncData(
+            `totalStats-${season.value}`, // UNIQUE KEY
+            async () => {
+                return await $fetch<{ totalGamesConverted: { victory_team: string, defeat_team: string }[] }>('/api/get-stats', {
+                    query: { season: season.value }
+                });
             },
-                {
-                    getCachedData(key) {
-                        return nuxtApp.payload.data[key] || nuxtApp.static.data[key]
-                    }
-                },
-            )
-            if (statsError.value) {
-                console.log("We have statsError", statsError.value)
-                return statsError.value;
+            {
+                getCachedData(key) {
+                    return nuxtApp.payload.data[key] || nuxtApp.static.data[key]
+                }
             }
+        )
 
-            if (stats.value && !allStats.value) {
-                allStats.value = stats.value;
-                totalGames.value = allStats.value!.totalGamesConverted.length;
-                // console.log("stats value: ", allStats.value!.totalGamesConverted.length)
-                let vic = 0;
-                let def = 0;
-                allStats.value!.totalGamesConverted.forEach((el: any) => {
-                    if (el.victory_team == 'Insecure') {
-                        vic += 1;
-                    }
-                    else {
-                        def += 1;
-                    }
-                })
-                victories.value = vic;
-                defeats.value = def;
-                winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
-            }
+        if (statsError.value) return;
 
-        } catch (error) {
-            console.log(error);
+        // REMOVED: !allStats.value check so it updates every time
+        if (stats.value) {
+            allStats.value = stats.value;
+            calculateWinrates(allStats.value.totalGamesConverted);
         }
+    } catch (error) {
+        console.log(error);
     }
 }
 
@@ -155,48 +139,36 @@ watch(() => totalPages.value, () => {
     paginationKey.value++
 })
 
-watch((searchQuery), async () => {
-    if (searchQuery.value == '') {
-        console.log(searchQuery.value, allStats.value)
-        totalGames.value = allStats.value!.totalGamesConverted.length;
-        // console.log("stats value: ", allStats.value!.totalGamesConverted.length)
-        let vic = 0;
-        let def = 0;
-        allStats.value!.totalGamesConverted.forEach((el: any) => {
-            if (el.victory_team == 'Insecure') {
-                vic += 1;
-            }
-            else {
-                def += 1;
-            }
-        })
-        victories.value = vic;
-        defeats.value = def;
-        winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
-    }
-    else {
-        const withQueryName = allStats.value!.totalGamesConverted.filter((el) => {
-            return el.victory_team.toLowerCase().startsWith(searchQuery.value.toLowerCase()) || el.defeat_team.toLowerCase().startsWith(searchQuery.value.toLowerCase())
-        })
-        totalGames.value = withQueryName.length;
+// Helper to keep logic DRY (Don't Repeat Yourself)
+const calculateWinrates = (dataArray: any[]) => {
+    totalGames.value = dataArray.length;
+    let vic = 0;
+    let def = 0;
+    dataArray.forEach((el: any) => {
+        if (el.victory_team === 'Insecure') vic += 1;
+        else def += 1;
+    })
+    victories.value = vic;
+    defeats.value = def;
+    winrate.value = totalGames.value > 0 ? Math.trunc((victories.value / totalGames.value) * 100) : 0;
+}
 
-        // console.log("stats value: ", withQueryName.length)
-        let vic = 0;
-        let def = 0;
-        withQueryName.forEach((el: any) => {
-            if (el.victory_team == 'Insecure') {
-                vic += 1;
-            }
-            else {
-                def += 1;
-            }
-        })
-        victories.value = vic;
-        defeats.value = def;
-        winrate.value = Math.trunc((victories.value / totalGames.value) * 100)
-    }
+// 2. THE WATCHER: This triggers the update when the dropdown changes
+watch(season, async () => {
+    currentPage.value = 1; // Reset to page 1 on season change
+    await fetchGames();
+    await getStats();
+})
 
-
+// Update search watcher to use the helper
+watch(searchQuery, () => {
+    if (!allStats.value) return;
+    
+    const filtered = allStats.value.totalGamesConverted.filter((el) => {
+        return el.victory_team.toLowerCase().startsWith(searchQuery.value.toLowerCase()) || 
+               el.defeat_team.toLowerCase().startsWith(searchQuery.value.toLowerCase())
+    })
+    calculateWinrates(filtered);
 })
 
 
@@ -344,8 +316,10 @@ const pieChartOptions = {
             </div>
         </div>
         <span class="text-4xl font-bold mt-4">Game Results</span>
+        
         <!-- filters -->
         <div class="flex flex-col 2xl:flex-row justify-center w-max mt-4 gap-6">
+            <USelect class="w-32" v-model="season" :items="seasonArray" />
             <UBadge size="xl" @click="filter = 'all'"
                 :class="[`${filter == 'all' ? 'bg-info-500 text-foreground' : 'bg-background border border-info-500 text-foreground '}`, 'hover:cursor-pointer hover:bg-info-400 hover:text-foreground rounded-xl transition-colors duration-300 ease-out']"
                 label="All Games" />

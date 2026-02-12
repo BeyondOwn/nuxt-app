@@ -33,7 +33,8 @@ export interface ClassIcon {
     scholar:{name:"Scholar",position:26},
     dosa:{name:"Dosa",position:27},
     deadeye: { name: 'Deadeye', position: 28 },
-    wukong:{name:"Wukong",position:29}
+    wukong:{name:"Wukong",position:29},
+    seraph:{name:"Seraph",position:30},
     // last class at position 29
   };
   

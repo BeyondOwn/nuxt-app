@@ -1,7 +1,7 @@
-
 export interface BatchConfig {
   batchSize?: number;
   delayMs?: number;
+  maxRequestsPerMinute?: number; // New option
   onBatchComplete?: (batchIndex: number, total: number) => void;
   onItemComplete?: (index: number, total: number, item: any) => void;
   onError?: (item: any, error: Error) => void;
@@ -28,6 +28,7 @@ export async function processBatches<TInput, TOutput>(
   const {
     batchSize = 25,
     delayMs = 2000,
+    maxRequestsPerMinute,
     onBatchComplete,
     onItemComplete,
     onError,
@@ -35,11 +36,33 @@ export async function processBatches<TInput, TOutput>(
 
   const results: TOutput[] = [];
   const errors: Array<{ item: TInput; error: Error }> = [];
+  
+  // Rate limiting tracking
+  let requestsInCurrentMinute = 0;
+  let minuteStartTime = Date.now();
 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const batchIndex = Math.floor(i / batchSize) + 1;
     const totalBatches = Math.ceil(items.length / batchSize);
+
+    // Check if we need to wait for rate limit reset
+    if (maxRequestsPerMinute && requestsInCurrentMinute + batch.length > maxRequestsPerMinute) {
+      const elapsedMs = Date.now() - minuteStartTime;
+      const remainingMs = 60000 - elapsedMs;
+      
+      if (remainingMs > 0) {
+        console.log(
+          `Rate limit approaching (${requestsInCurrentMinute}/${maxRequestsPerMinute} requests). ` +
+          `Waiting ${Math.ceil(remainingMs / 1000)}s before continuing...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, remainingMs));
+      }
+      
+      // Reset counter for new minute
+      requestsInCurrentMinute = 0;
+      minuteStartTime = Date.now();
+    }
 
     console.log(
       `Processing batch ${batchIndex}/${totalBatches} (items ${i + 1}-${Math.min(i + batchSize, items.length)} of ${items.length})`
@@ -67,6 +90,11 @@ export async function processBatches<TInput, TOutput>(
     });
 
     const batchResults = await Promise.all(batchPromises);
+    
+    // Update request counter
+    if (maxRequestsPerMinute) {
+      requestsInCurrentMinute += batch.length;
+    }
 
     // Separate successes and failures
     batchResults.forEach((result) => {
@@ -102,57 +130,91 @@ export async function processBatches<TInput, TOutput>(
  * @param processor - Async function that processes a single item
  * @param delayMs - Delay in milliseconds between items
  * @param maxRetries - Maximum number of retry attempts per item
+ * @param maxRequestsPerMinute - Maximum requests allowed per minute
  */
 export async function processSequentially<TInput, TOutput>(
-    items: TInput[],
-    processor: (item: TInput) => Promise<TOutput>,
-    delayMs: number = 100,
-    maxRetries: number = 3
-  ): Promise<BatchResult<TOutput>> {
-    const results: TOutput[] = [];
-    const errors: Array<{ item: TInput; error: Error }> = [];
+  items: TInput[],
+  processor: (item: TInput) => Promise<TOutput>,
+  delayMs: number = 100,
+  maxRetries: number = 3,
+  maxRequestsPerMinute?: number
+): Promise<BatchResult<TOutput>> {
+  const results: TOutput[] = [];
+  const errors: Array<{ item: TInput; error: Error }> = [];
   
-    for (const [index, item] of items.entries()) {
-      let retryCount = 0;
-      let success = false;
-  
-      while (!success && retryCount < maxRetries) {
-        try {
-          console.log(
-            `Processing ${index + 1}/${items.length}${retryCount > 0 ? ` - Retry ${retryCount}/${maxRetries}` : ''}`
-          );
+  // Rate limiting tracking
+  let requestsInCurrentMinute = 0;
+  let minuteStartTime = Date.now();
+
+  for (const [index, item] of items.entries()) {
+    // Check if we need to wait for rate limit reset
+    if (maxRequestsPerMinute && requestsInCurrentMinute >= maxRequestsPerMinute) {
+      const elapsedMs = Date.now() - minuteStartTime;
+      const remainingMs = 60000 - elapsedMs;
+      
+      if (remainingMs > 0) {
+        console.log(
+          `Rate limit reached (${requestsInCurrentMinute}/${maxRequestsPerMinute} requests). ` +
+          `Waiting ${Math.ceil(remainingMs / 1000)}s before continuing...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, remainingMs));
+      }
+      
+      // Reset counter for new minute
+      requestsInCurrentMinute = 0;
+      minuteStartTime = Date.now();
+    }
+    
+    let retryCount = 0;
+    let success = false;
+
+    while (!success && retryCount < maxRetries) {
+      try {
+        console.log(
+          `Processing ${index + 1}/${items.length}${retryCount > 0 ? ` - Retry ${retryCount}/${maxRetries}` : ''}`
+        );
+        
+        const result = await processor(item);
+        results.push(result);
+        success = true;
+        
+        // Increment request counter
+        if (maxRequestsPerMinute) {
+          requestsInCurrentMinute++;
+        }
+        
+        console.log(`✓ Successfully processed item ${index + 1}`);
+
+        // Wait between requests (except after the last one)
+        if (index < items.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      } catch (error) {
+        retryCount++;
+        const err = error instanceof Error ? error : new Error(String(error));
+        
+        if (retryCount >= maxRetries) {
+          console.error(`✗ Failed to process item ${index + 1} after ${maxRetries} attempts:`, err.message);
+          errors.push({ item, error: err });
+          success = true; // Give up on this item
           
-          const result = await processor(item);
-          results.push(result);
-          success = true;
-          
-          console.log(`✓ Successfully processed item ${index + 1}`);
-  
-          // Wait between requests (except after the last one)
-          if (index < items.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          // Still count failed requests towards rate limit
+          if (maxRequestsPerMinute) {
+            requestsInCurrentMinute++;
           }
-        } catch (error) {
-          retryCount++;
-          const err = error instanceof Error ? error : new Error(String(error));
-          
-          if (retryCount >= maxRetries) {
-            console.error(`✗ Failed to process item ${index + 1} after ${maxRetries} attempts:`, err.message);
-            errors.push({ item, error: err });
-            success = true; // Give up on this item
-          } else {
-            const waitTime = delayMs * Math.pow(2, retryCount); // Exponential backoff
-            console.log(`Failed attempt ${retryCount}. Waiting ${waitTime}ms before retry...`);
-            await new Promise((resolve) => setTimeout(resolve, waitTime));
-          }
+        } else {
+          const waitTime = delayMs * Math.pow(2, retryCount); // Exponential backoff
+          console.log(`Failed attempt ${retryCount}. Waiting ${waitTime}ms before retry...`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
         }
       }
     }
-  
-    return {
-      results,
-      errors,
-      successCount: results.length,
-      failureCount: errors.length,
-    };
   }
+
+  return {
+    results,
+    errors,
+    successCount: results.length,
+    failureCount: errors.length,
+  };
+}

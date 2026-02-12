@@ -1,74 +1,51 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { Database } from '~/types/supabase'
 
-// export default defineEventHandler(async (event) => {
-//   const supabase = await serverSupabaseClient<Database>(event)
-//   const query = getQuery(event)
-
-//   // Default values for pagination
-//   const page = parseInt(query.page as string) || 1
-//   const pageSize = parseInt(query.pageSize as string) || 6 // You can adjust the default page size
-
-//   const startIndex = (page - 1) * pageSize
-//   const endIndex = page * pageSize - 1
-
-//   if (!supabase) {
-//     console.log('No supabase')
-//     event.node.res.statusCode = 500
-//     return { error: 'Failed to initialize Supabase client' }
-//   }
-
-//   try {
-//     const {
-//       data,
-//       error: gamesError,
-//       count,
-//     } = await supabase
-//       .from('games')
-//       .select('*', { count: 'exact' }) // Include the total count for client-side logic
-//       .order('created_at', { ascending: false }) // Ensure consistent ordering for pagination (replace 'id' with your preferred column)
-//       .range(startIndex, endIndex)
-
-//     if (gamesError) {
-//       event.node.res.statusCode = Number(gamesError.code) || 500
-//       return { error: gamesError.message, details: gamesError.details }
-//     }
-
-//     return {
-//       data,
-//       totalCount: count,
-//       currentPage: page,
-//       pageSize: pageSize,
-//       hasNextPage: count ? count > endIndex + 1 : false,
-//     }
-//   } catch (error: any) {
-//     console.error('Error fetching games:', error)
-//     event.node.res.statusCode = 500
-//     return { error: 'Failed to fetch games', details: error.message }
-//   }
-// })
-
 export default defineEventHandler(async (event) => {
   const supabase = await serverSupabaseClient<Database>(event)
+  
+  // 1. Extract the season from the query parameters
+  const query = getQuery(event)
+  const season = query.season as string
 
   if (!supabase) {
-    console.log('No supabase')
-    event.node.res.statusCode = 500
-    return { error: 'Failed to initialize Supabase client' }
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Failed to initialize Supabase client',
+    })
   }
 
   try {
-    const { data, error, count } = await supabase.from('games').select('*', { count: 'exact' }).order('date_hour', { ascending: false })
+    // 2. Start building the query
+    let dbQuery = supabase
+      .from('games')
+      .select('*', { count: 'exact' })
 
-    if (error) return error.message
-    if (data) {
-      return {
-        data,
-        count,
-      }
+    // 3. Apply the season filter ONLY if it's provided
+    if (season) {
+      dbQuery = dbQuery.eq('season', season)
     }
-  } catch (error) {
-    console.log('Error from get-games: ', error)
-    return error
+
+    const { data, error, count } = await dbQuery
+      .order('date_hour', { ascending: false })
+
+    if (error) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: error.message,
+      })
+    }
+
+    return {
+      data: data || [],
+      count: count || 0,
+    }
+
+  } catch (error: any) {
+    console.error('Error from get-games API:', error)
+    return createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Internal Server Error',
+    })
   }
 })

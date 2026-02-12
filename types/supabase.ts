@@ -34,6 +34,7 @@ export type Database = {
           highest_kd: number | null
           highest_taken: number | null
           player_name: string
+          season: string
           total_dealt: number | null
           total_deaths: number | null
           total_debuffs: number | null
@@ -60,6 +61,7 @@ export type Database = {
           highest_kd?: number | null
           highest_taken?: number | null
           player_name: string
+          season?: string
           total_dealt?: number | null
           total_deaths?: number | null
           total_debuffs?: number | null
@@ -86,6 +88,7 @@ export type Database = {
           highest_kd?: number | null
           highest_taken?: number | null
           player_name?: string
+          season?: string
           total_dealt?: number | null
           total_deaths?: number | null
           total_debuffs?: number | null
@@ -115,6 +118,7 @@ export type Database = {
           highest_kd: number | null
           highest_taken: number | null
           player_name: string
+          season: string
           total_dealt: number | null
           total_deaths: number | null
           total_debuffs: number | null
@@ -141,6 +145,7 @@ export type Database = {
           highest_kd?: number | null
           highest_taken?: number | null
           player_name: string
+          season?: string
           total_dealt?: number | null
           total_deaths?: number | null
           total_debuffs?: number | null
@@ -167,6 +172,7 @@ export type Database = {
           highest_kd?: number | null
           highest_taken?: number | null
           player_name?: string
+          season?: string
           total_dealt?: number | null
           total_deaths?: number | null
           total_debuffs?: number | null
@@ -179,6 +185,7 @@ export type Database = {
       combat_logs: {
         Row: {
           created_at: string
+          death_matrix: Json | null
           duration: number | null
           guild: string
           id: string
@@ -190,6 +197,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          death_matrix?: Json | null
           duration?: number | null
           guild?: string
           id?: string
@@ -201,6 +209,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          death_matrix?: Json | null
           duration?: number | null
           guild?: string
           id?: string
@@ -302,6 +311,7 @@ export type Database = {
           id: number
           kd: string | null
           player_name: string | null
+          season: string
           taken: number | null
           team_type: string | null
         }
@@ -317,6 +327,7 @@ export type Database = {
           id?: number
           kd?: string | null
           player_name?: string | null
+          season?: string
           taken?: number | null
           team_type?: string | null
         }
@@ -332,10 +343,18 @@ export type Database = {
           id?: number
           kd?: string | null
           player_name?: string | null
+          season?: string
           taken?: number | null
           team_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_game_id_season"
+            columns: ["game_id", "season"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id", "season"]
+          },
           {
             foreignKeyName: "game_players_game_id_fkey"
             columns: ["game_id"]
@@ -352,6 +371,7 @@ export type Database = {
           defeat_team_name: string | null
           defeat_team_score: number | null
           id: number
+          season: string
           user_id: string | null
           victory_team_name: string | null
           victory_team_score: number | null
@@ -362,6 +382,7 @@ export type Database = {
           defeat_team_name?: string | null
           defeat_team_score?: number | null
           id?: number
+          season?: string
           user_id?: string | null
           victory_team_name?: string | null
           victory_team_score?: number | null
@@ -372,6 +393,7 @@ export type Database = {
           defeat_team_name?: string | null
           defeat_team_score?: number | null
           id?: number
+          season?: string
           user_id?: string | null
           victory_team_name?: string | null
           victory_team_score?: number | null
@@ -440,7 +462,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      player_season_view: {
+        Row: {
+          created_at: string | null
+          dealt: number | null
+          deaths: number | null
+          debuffs: number | null
+          enemy_guild: string | null
+          game_id: number | null
+          guild: string | null
+          healed: number | null
+          id: number | null
+          kd: string | null
+          player_name: string | null
+          season: string | null
+          taken: number | null
+          team_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       extract_kills: { Args: { kd_text: string }; Returns: number }
