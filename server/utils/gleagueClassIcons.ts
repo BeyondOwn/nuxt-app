@@ -1,0 +1,38 @@
+// utils/classIcons.ts
+// Map each BDO class name to its icon path in the public folder
+// Replace the paths with your actual filenames once you add them to /public/icons/classes/
+
+export const classIcons: Record<string, string> = {
+    Warrior:      '/icons/classes/warrior.png',
+    Ranger:       '/icons/classes/ranger.png',
+    Sorceress:    '/icons/classes/sorceress.png',
+    Berserker:    '/icons/classes/berserker.png',
+    Tamer:        '/icons/classes/tamer.png',
+    Musa:         '/icons/classes/musa.png',
+    Maehwa:       '/icons/classes/maehwa.png',
+    Valkyrie:     '/icons/classes/valkyrie.png',
+    Kunoichi:     '/icons/classes/kunoichi.png',
+    Ninja:        '/icons/classes/ninja.png',
+    Wizard:       '/icons/classes/wizard.png',
+    Witch:        '/icons/classes/witch.png',
+    'Dark Knight': '/icons/classes/dark_knight.png',
+    Striker:      '/icons/classes/striker.png',
+    Mystic:       '/icons/classes/mystic.png',
+    Lahn:         '/icons/classes/lahn.png',
+    Archer:       '/icons/classes/archer.png',
+    Shai:         '/icons/classes/shai.png',
+    Guardian:     '/icons/classes/guardian.png',
+    Hashashin:    '/icons/classes/hashashin.png',
+    Nova:         '/icons/classes/nova.png',
+    Sage:         '/icons/classes/sage.png',
+    Corsair:      '/icons/classes/corsair.png',
+    Drakania:     '/icons/classes/drakania.png',
+    Woosa:        '/icons/classes/woosa.png',
+    Maegu:        '/icons/classes/maegu.png',
+    Scholar:      '/icons/classes/scholar.png',
+    Dosa:         '/icons/classes/dosa.png',
+    Deadeye:      '/icons/classes/deadeye.png',
+    Wukong:       '/icons/classes/wukong.png',
+    Seraph:       '/icons/classes/seraph.png',
+    Acher:        '/icons/classes/acher.png',
+  }

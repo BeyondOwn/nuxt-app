@@ -300,6 +300,7 @@ export type Database = {
       }
       game_players: {
         Row: {
+          class: string | null
           created_at: string
           dealt: number | null
           deaths: number | null
@@ -312,10 +313,12 @@ export type Database = {
           kd: string | null
           player_name: string | null
           season: string
+          spec: string | null
           taken: number | null
           team_type: string | null
         }
         Insert: {
+          class?: string | null
           created_at?: string
           dealt?: number | null
           deaths?: number | null
@@ -328,10 +331,12 @@ export type Database = {
           kd?: string | null
           player_name?: string | null
           season?: string
+          spec?: string | null
           taken?: number | null
           team_type?: string | null
         }
         Update: {
+          class?: string | null
           created_at?: string
           dealt?: number | null
           deaths?: number | null
@@ -344,23 +349,24 @@ export type Database = {
           kd?: string | null
           player_name?: string | null
           season?: string
+          spec?: string | null
           taken?: number | null
           team_type?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_game_id_season"
-            columns: ["game_id", "season"]
-            isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id", "season"]
-          },
           {
             foreignKeyName: "game_players_game_id_fkey"
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_game_id_season_fkey"
+            columns: ["game_id", "season"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id", "season"]
           },
         ]
       }
@@ -421,6 +427,27 @@ export type Database = {
           created_at?: string
           family_name?: string
           id?: number
+        }
+        Relationships: []
+      }
+      player_roster: {
+        Row: {
+          class: string | null
+          player_name: string
+          spec: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          class?: string | null
+          player_name: string
+          spec?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          class?: string | null
+          player_name?: string
+          spec?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

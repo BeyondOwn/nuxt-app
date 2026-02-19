@@ -2,6 +2,7 @@
 import { UButton } from '#components';
 import type { AllStats, CalculatedMetrics } from '@/models/models';
 import { formatNumberWithCommas } from '@/server/utils/formatNumberWithCommas';
+import { classIcons } from '@/server/utils/gleagueClassIcons';
 import type { Database } from '@/types/supabase';
 import type { TableColumn } from '@nuxt/ui';
 
@@ -256,6 +257,38 @@ const visibleColumns: TableColumn<Database['public']['Tables']['aggregated_stats
         },
         cell: ({ row }) => `${formatNumberWithCommas(row.getValue('highest_kd'))}`
     },
+
+    {
+    accessorKey: 'class',
+    header: ({ column }) => {
+        const isSorted = column.getIsSorted();
+        return h(UButton, {
+            variant: 'ghost',
+            label: 'Class',
+            icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
+            class: '-mx-2.5 min-w-[187px] cursor-pointer font-bold text-base text-foreground h-full hover:bg-purple-600',
+            onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+        });
+    },
+    cell: ({ row }) => {
+    const className = row.getValue('class') as string;
+    const iconPath = className ? classIcons[className] : null;
+
+    return h('div', { class: 'flex items-center justify-start gap-2 min-w-[100px]' }, [
+        h('div', { class: 'w-6 h-6 flex items-center justify-center shrink-0' }, [
+            iconPath
+                ? h('img', { 
+                    src: iconPath, 
+                    alt: className, 
+                    title: className,
+                    class: 'w-6 h-6 object-contain' 
+                  })
+                : h('span', { class: 'text-muted-foreground text-xs' }, '—'),
+        ]),
+        h('span', {}, className ?? '—')
+    ]);
+}
+},
 
     {
         accessorKey: 'highest_dealt',

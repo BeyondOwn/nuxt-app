@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
       return
     }
 
-    const contents: { games: createGame[]; errors?: any[]; gamesName: string[] } = await generateTableContent(body, geminiAi as GoogleGenAI)
+    const contents: { games: createGame[]; errors?: any[]; gamesName: string[] } = await generateTableContent(body, geminiAi as GoogleGenAI, supabase)
 
     if (!Array.isArray(contents.games)) {
       event.node.res.statusCode = 500
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
         event.node.res.statusCode = 500
         console.error('Error in generated content:', content.error)
         errors.push(`${content.error}`)
-        continue // Skip to the next game if there's an error in generation
+        continue
       }
 
       try {
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
           const errorMessage = `Game '${contents.gamesName[index]}' is already in the system.`
           console.log(errorMessage)
           errors.push(errorMessage)
-          continue // Skip to the next game if it's a duplicate
+          continue
         }
 
         const { data: games, error: gamesError } = await supabase
@@ -68,14 +68,13 @@ export default defineEventHandler(async (event) => {
           event.node.res.statusCode = 500
           console.error(`Error inserting game: ${contents.gamesName[index]} `, gamesError)
           errors.push(`Error inserting game: ${contents.gamesName[index]} `)
-          continue // Skip to the next game if insertion failed
+          continue
         }
 
         if (games && games.length > 0) {
           try {
             const playersToInsert = []
 
-            // Loop through victory team
             for (const playerName in content.victory_team) {
               const player = content.victory_team[playerName]
               playersToInsert.push({
@@ -93,7 +92,6 @@ export default defineEventHandler(async (event) => {
               })
             }
 
-            // Loop through defeat team
             for (const playerName in content.defeat_team) {
               const player = content.defeat_team[playerName]
               playersToInsert.push({
@@ -111,23 +109,64 @@ export default defineEventHandler(async (event) => {
               })
             }
 
-            const { data: game_players, error: game_playersError } = await supabase.from('game_players').insert(playersToInsert).select('*')
+            const { data: game_players, error: game_playersError } = await supabase
+              .from('game_players')
+              .insert(playersToInsert)
+              .select('*')
 
             if (game_playersError) {
               event.node.res.statusCode = 500
               console.error(`Supabase insert error : ${contents.gamesName[index]}`, game_playersError)
               errors.push(`Supabase insert error : ${contents.gamesName[index]}`)
-              // Optionally, you might want to delete the game entry if player insertion fails
               await supabase.from('games').delete().eq('id', games[0].id)
-              continue // Skip to the next game
+              continue
             } else {
               console.log('Players inserted for game:', games[0].id, game_players)
-              successfulSubmissions.push({ gameId: games[0].id, message: `Game ${contents.gamesName[index]} submitted successfully` })
+
+              // ── Auto-fill class/spec from player roster ──────────────────────
+              try {
+                const playerNames = playersToInsert
+                  .map(p => p.player_name)
+                  .filter(Boolean) as string[]
+
+                const { data: rosterEntries } = await supabase
+                  .from('player_roster')
+                  .select('player_name, class, spec')
+                  .in('player_name', playerNames)
+
+                if (rosterEntries && rosterEntries.length > 0) {
+                  const rosterMap = new Map(
+                    rosterEntries.map(r => [r.player_name, { class: r.class, spec: r.spec }])
+                  )
+
+                  const insertedPlayers = game_players ?? []
+                  const rosterUpdates = insertedPlayers
+                    .filter(p => p.player_name && rosterMap.has(p.player_name))
+                    .map(p => {
+                      const entry = rosterMap.get(p.player_name!)!
+                      return supabase
+                        .from('game_players')
+                        .update({ class: entry.class, spec: entry.spec })
+                        .eq('id', p.id)
+                    })
+
+                  await Promise.all(rosterUpdates)
+                  console.log(`Auto-filled class/spec for ${rosterUpdates.length} players in game ${games[0].id}`)
+                }
+              } catch (autofillError) {
+                // Non-fatal — log but don't fail the whole upload
+                console.error('Auto-fill error (non-fatal):', autofillError)
+              }
+              // ────────────────────────────────────────────────────────────────
+
+              successfulSubmissions.push({
+                gameId: games[0].id,
+                message: `Game ${contents.gamesName[index]} submitted successfully`,
+              })
             }
           } catch (playerError) {
             console.error('Error processing players:', playerError)
             errors.push(`Error processing players: ${contents.gamesName[index]}`)
-            // Optionally, you might want to delete the game entry if player processing fails
             if (games && games.length > 0) {
               await supabase.from('games').delete().eq('id', games[0].id)
             }
@@ -155,5 +194,5 @@ export default defineEventHandler(async (event) => {
 })
 
 export const config = {
-  middleware: ['auth'], // Apply the 'auth' middleware
+  middleware: ['auth'],
 }

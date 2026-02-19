@@ -37,6 +37,7 @@ watch(theme, () => {
                     <NuxtLink v-if="!user" to="/login">Login</NuxtLink>
                     <NuxtLink v-if="uploaderRef" to="/upload">Upload</NuxtLink>
                     <NuxtLink v-if="user" to="/combat-logger">Combat Logger</NuxtLink>
+                    <NuxtLink v-if="uploaderRef" to="/admin/roster">Roster</NuxtLink>
                 </div>
                 <div class="flex flex-row justify-center items-center">
                     <UButton v-if="user" @click="client.auth.signOut()" variant="outline" class="text-foreground">Logout
