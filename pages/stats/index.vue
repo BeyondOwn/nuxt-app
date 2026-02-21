@@ -166,16 +166,18 @@ const getGuildStats = async () => {
 const visibleColumns: TableColumn<Database['public']['Tables']['aggregated_stats_total']['Row']>[] = [
     {
         accessorKey: 'player_name',
-        header: 'Name',
-        cell: ({ row, column }) => {
-            const isPinned = column.getIsPinned();
+        header: ({ column }) => {
+            const isSorted = column.getIsSorted();
 
-            return h('div', {
-                class: `${isPinned ? 'font-medium' : ''}`,
-            },
-                row.getValue('player_name')
-            );
+            return h(UButton, {
+                variant: 'ghost',
+                label: 'Name',
+                icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
+                class: '-mx-2.5 cursor-pointer font-bold text-base text-foreground h-full hover:bg-purple-600',
+                onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+            });
         },
+        cell: ({ row }) => `${row.getValue('player_name')}`
     },
 
     {
